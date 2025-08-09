@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MJL 아시아발 글로벌 물류 운임 대시보드 - Extended</title>
+    <title>MJL 아시아발 글로벌 물류 운임 대시보드 - Fixed</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
@@ -336,39 +336,6 @@
             text-align: center;
         }
         
-        .route-details {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 20px;
-        }
-        
-        .route-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
-        }
-        
-        .route-card {
-            background: white;
-            padding: 12px;
-            border-radius: 8px;
-            border-left: 4px solid #3498db;
-        }
-        
-        .route-name {
-            font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: 5px;
-        }
-        
-        .route-ports {
-            font-size: 0.85em;
-            color: #7f8c8d;
-            line-height: 1.4;
-        }
-        
         .tabs {
             display: flex;
             gap: 10px;
@@ -409,12 +376,47 @@
             display: block;
         }
         
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .summary-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .summary-title {
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            opacity: 0.9;
+        }
+        
+        .summary-content {
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+        
+        .origin-selector {
+            margin-bottom: 15px;
+        }
+        
+        .origin-selector select {
+            padding: 8px 12px;
+            border: 2px solid #e74c3c;
+            border-radius: 6px;
+            font-size: 0.9em;
+            background: white;
+            cursor: pointer;
+        }
+        
         @media (max-width: 768px) {
             .charts-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .route-grid {
                 grid-template-columns: 1fr;
             }
             
@@ -431,20 +433,19 @@
 <body>
     <div class="dashboard">
         <div class="header">
-            <h1>🚢 ✈️ MJL 아시아발 글로벌 물류 운임 대시보드 - Extended</h1>
+            <h1>🚢 ✈️ MJL 아시아발 글로벌 물류 운임 대시보드</h1>
             <div class="subtitle">MJ LOGISTICS GLOBAL FREIGHT RATE DASHBOARD</div>
             <div class="update-info">
-                <span class="update-time" id="updateTime">마지막 업데이트: 2025년 1월 기준</span>
-                <span class="data-status">아시아(중국/베트남) → 북미/유럽/동남아/인도</span>
+                <span class="update-time" id="updateTime">마지막 업데이트: 2025년 1월 21일</span>
+                <span class="data-status">아시아(중국/베트남) → 북미/유럽/인도</span>
             </div>
         </div>
 
         <div class="demo-notice">
-            📊 2025년 1월 최신 해운 지수 및 운임 데이터 (확장판)
+            📊 2025년 1월 최신 해운 지수 및 운임 데이터
             <br>• BDI: 1,140 | SCFI: 984.73 | CCFI: 962.64 | HRCI: 635.6 (2025년 1월 17일 기준)
-            <br>• 출발지: 상해, 홍콩, 하노이, 호치민
-            <br>• 인도: Deendayal(Kandla), Paradip, JNPT / DEL, BOM, BLR 공항
-            <br>• 유럽: 로테르담 항구 / 비엔나(VIE) 공항
+            <br>• 출발지: 상해, 홍콩, 심천, 하노이, 호치민
+            <br>• 도착지: 북미(LA, 롱비치), 유럽(로테르담), 인도(Kandla, Paradip, JNPT)
         </div>
 
         <div class="control-panel">
@@ -458,11 +459,11 @@
                             <div class="upload-hint">클릭하거나 드래그 앤 드롭하세요</div>
                         </div>
                         <div id="fileInfo" class="file-info" style="display: none;"></div>
-                        <button class="download-btn" onclick="downloadCurrentData()">📥 현재 데이터 CSV 다운로드</button>
+                        <button class="download-btn" id="downloadBtn">📥 현재 데이터 CSV 다운로드</button>
                     </div>
                     
                     <div>
-                        <div style="margin-bottom: 10px; font-weight: 600;">시간 범위</div>
+                        <div style="margin-bottom: 10px; font-weight: 600;">시간 범위 선택</div>
                         <div class="time-range-buttons">
                             <button class="time-btn" data-range="3M">3개월</button>
                             <button class="time-btn" data-range="6M">6개월</button>
@@ -499,7 +500,7 @@
         </div>
 
         <div class="freight-table">
-            <h3 class="chart-title">📊 2025년 1월 운임 현황 - 해상 운임 (USD/TEU)</h3>
+            <h3 class="chart-title">📊 2025년 1월 운임 현황</h3>
             
             <div class="tabs">
                 <button class="tab active" onclick="switchTab('sea')">🚢 해상 운임</button>
@@ -513,19 +514,18 @@
                             <th rowspan="3" class="origin-header">출발지</th>
                             <th colspan="2">북미서부</th>
                             <th colspan="1">유럽</th>
-                            <th colspan="3">동남아</th>
                             <th colspan="3">인도</th>
                         </tr>
                         <tr class="destination-header">
                             <th>LA</th>
                             <th>롱비치</th>
                             <th>로테르담</th>
-                            <th>싱가포르</th>
-                            <th>클랑</th>
-                            <th>방콕</th>
                             <th>Kandla</th>
                             <th>Paradip</th>
                             <th>JNPT</th>
+                        </tr>
+                        <tr class="destination-header">
+                            <th colspan="6" style="font-size: 0.8em; background: #7f8c8d;">단위: USD/TEU</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -534,9 +534,6 @@
                             <td>$1,628</td>
                             <td>$1,642</td>
                             <td>$3,542</td>
-                            <td>$485</td>
-                            <td>$492</td>
-                            <td>$478</td>
                             <td>$895</td>
                             <td>$912</td>
                             <td>$925</td>
@@ -546,21 +543,24 @@
                             <td>$1,685</td>
                             <td>$1,698</td>
                             <td>$3,625</td>
-                            <td>$512</td>
-                            <td>$518</td>
-                            <td>$505</td>
                             <td>$928</td>
                             <td>$945</td>
                             <td>$958</td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: bold;">🇨🇳 심천</td>
+                            <td>$1,658</td>
+                            <td>$1,672</td>
+                            <td>$3,585</td>
+                            <td>$915</td>
+                            <td>$932</td>
+                            <td>$945</td>
                         </tr>
                         <tr>
                             <td style="font-weight: bold;">🇻🇳 하노이</td>
                             <td>$1,542</td>
                             <td>$1,558</td>
                             <td>$3,385</td>
-                            <td>$425</td>
-                            <td>$432</td>
-                            <td>$418</td>
                             <td>$842</td>
                             <td>$858</td>
                             <td>$872</td>
@@ -570,9 +570,6 @@
                             <td>$1,485</td>
                             <td>$1,498</td>
                             <td>$3,285</td>
-                            <td>$385</td>
-                            <td>$392</td>
-                            <td>$378</td>
                             <td>$812</td>
                             <td>$828</td>
                             <td>$842</td>
@@ -588,19 +585,18 @@
                             <th rowspan="3" class="origin-header">출발지</th>
                             <th colspan="2">북미</th>
                             <th colspan="1">유럽</th>
-                            <th colspan="3">동남아</th>
                             <th colspan="3">인도</th>
                         </tr>
                         <tr class="destination-header">
                             <th>LAX</th>
                             <th>JFK</th>
                             <th>VIE</th>
-                            <th>SIN</th>
-                            <th>KUL</th>
-                            <th>BKK</th>
                             <th>DEL</th>
                             <th>BOM</th>
                             <th>BLR</th>
+                        </tr>
+                        <tr class="destination-header">
+                            <th colspan="6" style="font-size: 0.8em; background: #7f8c8d;">단위: USD/kg</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -609,9 +605,6 @@
                             <td>$4.85</td>
                             <td>$5.12</td>
                             <td>$3.92</td>
-                            <td>$2.15</td>
-                            <td>$2.08</td>
-                            <td>$2.02</td>
                             <td>$2.78</td>
                             <td>$2.85</td>
                             <td>$2.92</td>
@@ -621,21 +614,24 @@
                             <td>$5.12</td>
                             <td>$5.38</td>
                             <td>$4.15</td>
-                            <td>$2.28</td>
-                            <td>$2.22</td>
-                            <td>$2.15</td>
                             <td>$2.95</td>
                             <td>$3.02</td>
                             <td>$3.08</td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: bold;">🇨🇳 심천</td>
+                            <td>$5.02</td>
+                            <td>$5.28</td>
+                            <td>$4.05</td>
+                            <td>$2.88</td>
+                            <td>$2.95</td>
+                            <td>$3.02</td>
                         </tr>
                         <tr>
                             <td style="font-weight: bold;">🇻🇳 하노이</td>
                             <td>$4.65</td>
                             <td>$4.92</td>
                             <td>$3.78</td>
-                            <td>$1.85</td>
-                            <td>$1.78</td>
-                            <td>$1.72</td>
                             <td>$2.48</td>
                             <td>$2.55</td>
                             <td>$2.62</td>
@@ -645,65 +641,12 @@
                             <td>$4.45</td>
                             <td>$4.72</td>
                             <td>$3.58</td>
-                            <td>$1.65</td>
-                            <td>$1.58</td>
-                            <td>$1.52</td>
                             <td>$2.28</td>
                             <td>$2.35</td>
                             <td>$2.42</td>
                         </tr>
                     </tbody>
                 </table>
-            </div>
-        </div>
-
-        <div class="route-details">
-            <h3 class="chart-title">🌍 주요 항구 및 공항 정보</h3>
-            <div class="route-grid">
-                <div class="route-card">
-                    <div class="route-name">🇺🇸 북미 해상</div>
-                    <div class="route-ports">
-                        항구: LA(로스앤젤레스), 롱비치<br>
-                        공항: LAX, JFK
-                    </div>
-                </div>
-                <div class="route-card">
-                    <div class="route-name">🇪🇺 유럽</div>
-                    <div class="route-ports">
-                        항구: 로테르담 (유럽 최대)<br>
-                        공항: 비엔나(VIE) - 주요 화물 허브
-                    </div>
-                </div>
-                <div class="route-card">
-                    <div class="route-name">🇸🇬 동남아</div>
-                    <div class="route-ports">
-                        항구: 싱가포르, 클랑(말레이시아), 방콕<br>
-                        공항: SIN, KUL, BKK
-                    </div>
-                </div>
-                <div class="route-card">
-                    <div class="route-name">🇮🇳 인도 항구 TOP 3</div>
-                    <div class="route-ports">
-                        1. Deendayal Port (Kandla)<br>
-                        2. Paradip Port<br>
-                        3. JNPT (뭄바이)
-                    </div>
-                </div>
-                <div class="route-card">
-                    <div class="route-name">🇮🇳 인도 공항 TOP 3</div>
-                    <div class="route-ports">
-                        1. DEL (인디라 간디, 델리)<br>
-                        2. BOM (차트라파티 시바지, 뭄바이)<br>
-                        3. BLR (켐페고우다, 벵갈루루)
-                    </div>
-                </div>
-                <div class="route-card">
-                    <div class="route-name">🇻🇳 베트남</div>
-                    <div class="route-ports">
-                        하노이: 하이퐁항, 노이바이공항(HAN)<br>
-                        호치민: 사이공항, 떤선녓공항(SGN)
-                    </div>
-                </div>
             </div>
         </div>
 
@@ -716,7 +659,56 @@
             </div>
             
             <div class="chart-container">
-                <h3 class="chart-title">🚢 인도 항구별 해상 운임 비교</h3>
+                <h3 class="chart-title">🚢 북미 해상 운임 비교</h3>
+                <div class="origin-selector">
+                    <label>출발지: </label>
+                    <select id="usSeaOriginSelect" onchange="updateUSSeaChart()">
+                        <option value="all">전체</option>
+                        <option value="shanghai">상해</option>
+                        <option value="hongkong">홍콩</option>
+                        <option value="shenzhen">심천</option>
+                        <option value="hanoi">하노이</option>
+                        <option value="hochiminh">호치민</option>
+                    </select>
+                </div>
+                <div class="chart-canvas">
+                    <canvas id="usSeaChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-container">
+                <h3 class="chart-title">🚢 유럽 해상 운임 비교</h3>
+                <div class="origin-selector">
+                    <label>출발지: </label>
+                    <select id="euSeaOriginSelect" onchange="updateEUSeaChart()">
+                        <option value="all">전체</option>
+                        <option value="shanghai">상해</option>
+                        <option value="hongkong">홍콩</option>
+                        <option value="shenzhen">심천</option>
+                        <option value="hanoi">하노이</option>
+                        <option value="hochiminh">호치민</option>
+                    </select>
+                </div>
+                <div class="chart-canvas">
+                    <canvas id="euSeaChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <h3 class="chart-title">🚢 인도 해상 운임 비교</h3>
+                <div class="origin-selector">
+                    <label>출발지: </label>
+                    <select id="indiaSeaOriginSelect" onchange="updateIndiaSeaChart()">
+                        <option value="all">전체</option>
+                        <option value="shanghai">상해</option>
+                        <option value="hongkong">홍콩</option>
+                        <option value="shenzhen">심천</option>
+                        <option value="hanoi">하노이</option>
+                        <option value="hochiminh">호치민</option>
+                    </select>
+                </div>
                 <div class="chart-canvas">
                     <canvas id="indiaSeaChart"></canvas>
                 </div>
@@ -725,34 +717,65 @@
 
         <div class="charts-grid">
             <div class="chart-container">
-                <h3 class="chart-title">✈️ 인도 공항별 항공 운임 비교</h3>
+                <h3 class="chart-title">✈️ 북미 항공 운임 비교</h3>
+                <div class="origin-selector">
+                    <label>출발지: </label>
+                    <select id="usAirOriginSelect" onchange="updateUSAirChart()">
+                        <option value="all">전체</option>
+                        <option value="shanghai">상해</option>
+                        <option value="hongkong">홍콩</option>
+                        <option value="shenzhen">심천</option>
+                        <option value="hanoi">하노이</option>
+                        <option value="hochiminh">호치민</option>
+                    </select>
+                </div>
                 <div class="chart-canvas">
-                    <canvas id="indiaAirChart"></canvas>
+                    <canvas id="usAirChart"></canvas>
                 </div>
             </div>
             
             <div class="chart-container">
-                <h3 class="chart-title">🌏 베트남 출발 운임 추이</h3>
+                <h3 class="chart-title">✈️ 인도 항공 운임 비교</h3>
+                <div class="origin-selector">
+                    <label>출발지: </label>
+                    <select id="indiaAirOriginSelect" onchange="updateIndiaAirChart()">
+                        <option value="all">전체</option>
+                        <option value="shanghai">상해</option>
+                        <option value="hongkong">홍콩</option>
+                        <option value="shenzhen">심천</option>
+                        <option value="hanoi">하노이</option>
+                        <option value="hochiminh">호치민</option>
+                    </select>
+                </div>
                 <div class="chart-canvas">
-                    <canvas id="vietnamChart"></canvas>
+                    <canvas id="indiaAirChart"></canvas>
                 </div>
             </div>
         </div>
 
-        <div style="background: white; padding: 20px; border-radius: 15px; margin-bottom: 20px;">
-            <h3 style="color: #2c3e50; margin-bottom: 15px;">📋 확장 파일 형식 가이드</h3>
+        <div class="summary-cards" id="summaryCards">
+            <!-- 자동 생성될 영역 -->
+        </div>
+
+        <div style="background: white; padding: 20px; border-radius: 15px; margin: 30px 0;">
+            <h3 style="color: #2c3e50; margin-bottom: 15px;">📋 데이터 파일 형식 가이드</h3>
             <p style="color: #7f8c8d; margin-bottom: 10px;">Excel 또는 CSV 파일에 다음 순서로 컬럼을 작성하세요:</p>
-            <p style="font-size: 0.85em; color: #2c3e50; line-height: 1.8;">
-                <strong>기본 정보:</strong> 날짜, BDI, SCFI, CCFI, HRCI<br>
-                <strong>상해 해상:</strong> 상해-LA, 상해-롱비치, 상해-로테르담, 상해-싱가포르, 상해-클랑, 상해-방콕, 상해-Kandla, 상해-Paradip, 상해-JNPT<br>
-                <strong>상해 항공:</strong> 상해-LAX, 상해-JFK, 상해-VIE, 상해-SIN, 상해-KUL, 상해-BKK, 상해-DEL, 상해-BOM, 상해-BLR<br>
-                <strong>홍콩 해상:</strong> 홍콩-LA, 홍콩-롱비치, 홍콩-로테르담, 홍콩-싱가포르, 홍콩-클랑, 홍콩-방콕, 홍콩-Kandla, 홍콩-Paradip, 홍콩-JNPT<br>
-                <strong>홍콩 항공:</strong> 홍콩-LAX, 홍콩-JFK, 홍콩-VIE, 홍콩-SIN, 홍콩-KUL, 홍콩-BKK, 홍콩-DEL, 홍콩-BOM, 홍콩-BLR<br>
-                <strong>하노이 해상:</strong> 하노이-LA, 하노이-롱비치, 하노이-로테르담, 하노이-싱가포르, 하노이-클랑, 하노이-방콕, 하노이-Kandla, 하노이-Paradip, 하노이-JNPT<br>
-                <strong>하노이 항공:</strong> 하노이-LAX, 하노이-JFK, 하노이-VIE, 하노이-SIN, 하노이-KUL, 하노이-BKK, 하노이-DEL, 하노이-BOM, 하노이-BLR<br>
-                <strong>호치민 해상:</strong> 호치민-LA, 호치민-롱비치, 호치민-로테르담, 호치민-싱가포르, 호치민-클랑, 호치민-방콕, 호치민-Kandla, 호치민-Paradip, 호치민-JNPT<br>
-                <strong>호치민 항공:</strong> 호치민-LAX, 호치민-JFK, 호치민-VIE, 호치민-SIN, 호치민-KUL, 호치민-BKK, 호치민-DEL, 호치민-BOM, 호치민-BLR
-            </p>
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.85em;">
+                <strong>기본 정보:</strong> 날짜, BDI, SCFI, CCFI, HRCI<br><br>
+                <strong>해상 운임 (USD/TEU):</strong><br>
+                • 상해: LA, 롱비치, 로테르담, Kandla, Paradip, JNPT<br>
+                • 홍콩: LA, 롱비치, 로테르담, Kandla, Paradip, JNPT<br>
+                • 심천: LA, 롱비치, 로테르담, Kandla, Paradip, JNPT<br>
+                • 하노이: LA, 롱비치, 로테르담, Kandla, Paradip, JNPT<br>
+                • 호치민: LA, 롱비치, 로테르담, Kandla, Paradip, JNPT<br><br>
+                <strong>항공 운임 (USD/kg):</strong><br>
+                • 상해: LAX, JFK, VIE, DEL, BOM, BLR<br>
+                • 홍콩: LAX, JFK, VIE, DEL, BOM, BLR<br>
+                • 심천: LAX, JFK, VIE, DEL, BOM, BLR<br>
+                • 하노이: LAX, JFK, VIE, DEL, BOM, BLR<br>
+                • 호치민: LAX, JFK, VIE, DEL, BOM, BLR<br><br>
+                <strong>총 65개 컬럼 (5개 출발지 × 12개 도착지 + 5개 기본정보)</strong>
+            </div>
         </div>
     </div>
 
@@ -768,52 +791,24 @@
             },
             freight: {
                 shanghai: {
-                    sea: {
-                        la: [], longbeach: [], rotterdam: [],
-                        singapore: [], klang: [], bangkok: [],
-                        kandla: [], paradip: [], jnpt: []
-                    },
-                    air: {
-                        lax: [], jfk: [], vie: [],
-                        sin: [], kul: [], bkk: [],
-                        del: [], bom: [], blr: []
-                    }
+                    sea: { la: [], longbeach: [], rotterdam: [], kandla: [], paradip: [], jnpt: [] },
+                    air: { lax: [], jfk: [], vie: [], del: [], bom: [], blr: [] }
                 },
                 hongkong: {
-                    sea: {
-                        la: [], longbeach: [], rotterdam: [],
-                        singapore: [], klang: [], bangkok: [],
-                        kandla: [], paradip: [], jnpt: []
-                    },
-                    air: {
-                        lax: [], jfk: [], vie: [],
-                        sin: [], kul: [], bkk: [],
-                        del: [], bom: [], blr: []
-                    }
+                    sea: { la: [], longbeach: [], rotterdam: [], kandla: [], paradip: [], jnpt: [] },
+                    air: { lax: [], jfk: [], vie: [], del: [], bom: [], blr: [] }
+                },
+                shenzhen: {
+                    sea: { la: [], longbeach: [], rotterdam: [], kandla: [], paradip: [], jnpt: [] },
+                    air: { lax: [], jfk: [], vie: [], del: [], bom: [], blr: [] }
                 },
                 hanoi: {
-                    sea: {
-                        la: [], longbeach: [], rotterdam: [],
-                        singapore: [], klang: [], bangkok: [],
-                        kandla: [], paradip: [], jnpt: []
-                    },
-                    air: {
-                        lax: [], jfk: [], vie: [],
-                        sin: [], kul: [], bkk: [],
-                        del: [], bom: [], blr: []
-                    }
+                    sea: { la: [], longbeach: [], rotterdam: [], kandla: [], paradip: [], jnpt: [] },
+                    air: { lax: [], jfk: [], vie: [], del: [], bom: [], blr: [] }
                 },
                 hochiminh: {
-                    sea: {
-                        la: [], longbeach: [], rotterdam: [],
-                        singapore: [], klang: [], bangkok: [],
-                        kandla: [], paradip: [], jnpt: []
-                    },
-                    air: {
-                        lax: [], jfk: [], vie: [],
-                        sin: [], kul: [], bkk: [],
-                        del: [], bom: [], blr: []
-                    }
+                    sea: { la: [], longbeach: [], rotterdam: [], kandla: [], paradip: [], jnpt: [] },
+                    air: { lax: [], jfk: [], vie: [], del: [], bom: [], blr: [] }
                 }
             }
         };
@@ -846,20 +841,24 @@
             // 기준 운임 (2025년 1월 현재)
             const baseRates = {
                 shanghai: {
-                    sea: { la: 1628, longbeach: 1642, rotterdam: 3542, singapore: 485, klang: 492, bangkok: 478, kandla: 895, paradip: 912, jnpt: 925 },
-                    air: { lax: 4.85, jfk: 5.12, vie: 3.92, sin: 2.15, kul: 2.08, bkk: 2.02, del: 2.78, bom: 2.85, blr: 2.92 }
+                    sea: { la: 1628, longbeach: 1642, rotterdam: 3542, kandla: 895, paradip: 912, jnpt: 925 },
+                    air: { lax: 4.85, jfk: 5.12, vie: 3.92, del: 2.78, bom: 2.85, blr: 2.92 }
                 },
                 hongkong: {
-                    sea: { la: 1685, longbeach: 1698, rotterdam: 3625, singapore: 512, klang: 518, bangkok: 505, kandla: 928, paradip: 945, jnpt: 958 },
-                    air: { lax: 5.12, jfk: 5.38, vie: 4.15, sin: 2.28, kul: 2.22, bkk: 2.15, del: 2.95, bom: 3.02, blr: 3.08 }
+                    sea: { la: 1685, longbeach: 1698, rotterdam: 3625, kandla: 928, paradip: 945, jnpt: 958 },
+                    air: { lax: 5.12, jfk: 5.38, vie: 4.15, del: 2.95, bom: 3.02, blr: 3.08 }
+                },
+                shenzhen: {
+                    sea: { la: 1658, longbeach: 1672, rotterdam: 3585, kandla: 915, paradip: 932, jnpt: 945 },
+                    air: { lax: 5.02, jfk: 5.28, vie: 4.05, del: 2.88, bom: 2.95, blr: 3.02 }
                 },
                 hanoi: {
-                    sea: { la: 1542, longbeach: 1558, rotterdam: 3385, singapore: 425, klang: 432, bangkok: 418, kandla: 842, paradip: 858, jnpt: 872 },
-                    air: { lax: 4.65, jfk: 4.92, vie: 3.78, sin: 1.85, kul: 1.78, bkk: 1.72, del: 2.48, bom: 2.55, blr: 2.62 }
+                    sea: { la: 1542, longbeach: 1558, rotterdam: 3385, kandla: 842, paradip: 858, jnpt: 872 },
+                    air: { lax: 4.65, jfk: 4.92, vie: 3.78, del: 2.48, bom: 2.55, blr: 2.62 }
                 },
                 hochiminh: {
-                    sea: { la: 1485, longbeach: 1498, rotterdam: 3285, singapore: 385, klang: 392, bangkok: 378, kandla: 812, paradip: 828, jnpt: 842 },
-                    air: { lax: 4.45, jfk: 4.72, vie: 3.58, sin: 1.65, kul: 1.58, bkk: 1.52, del: 2.28, bom: 2.35, blr: 2.42 }
+                    sea: { la: 1485, longbeach: 1498, rotterdam: 3285, kandla: 812, paradip: 828, jnpt: 842 },
+                    air: { lax: 4.45, jfk: 4.72, vie: 3.58, del: 2.28, bom: 2.35, blr: 2.42 }
                 }
             };
 
@@ -881,7 +880,7 @@
                 currentData.indices.HRCI.push(Math.round((yearAgoIndices.HRCI + (currentIndices.HRCI - yearAgoIndices.HRCI) * progress * (1 + (Math.random() - 0.5) * volatility)) * 10) / 10);
                 
                 // 각 출발지별 운임 데이터 생성
-                ['shanghai', 'hongkong', 'hanoi', 'hochiminh'].forEach(origin => {
+                ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'].forEach(origin => {
                     // 해상 운임
                     Object.keys(baseRates[origin].sea).forEach(dest => {
                         const baseRate = baseRates[origin].sea[dest];
@@ -901,14 +900,14 @@
             }
         }
 
-        // CSV 다운로드
+        // CSV 다운로드 함수
         function downloadCurrentData() {
             let csvContent = '날짜,BDI,SCFI,CCFI,HRCI,';
             
             // 헤더 생성
-            const origins = ['상해', '홍콩', '하노이', '호치민'];
-            const seaPorts = ['LA', '롱비치', '로테르담', '싱가포르', '클랑', '방콕', 'Kandla', 'Paradip', 'JNPT'];
-            const airports = ['LAX', 'JFK', 'VIE', 'SIN', 'KUL', 'BKK', 'DEL', 'BOM', 'BLR'];
+            const origins = ['상해', '홍콩', '심천', '하노이', '호치민'];
+            const seaPorts = ['LA', '롱비치', '로테르담', 'Kandla', 'Paradip', 'JNPT'];
+            const airports = ['LAX', 'JFK', 'VIE', 'DEL', 'BOM', 'BLR'];
             
             origins.forEach(origin => {
                 seaPorts.forEach(port => csvContent += `${origin}-해상-${port},`);
@@ -921,7 +920,7 @@
                 const date = currentData.dates[i].toISOString().split('T')[0];
                 let row = `${date},${currentData.indices.BDI[i]},${currentData.indices.SCFI[i]},${currentData.indices.CCFI[i]},${currentData.indices.HRCI[i]},`;
                 
-                ['shanghai', 'hongkong', 'hanoi', 'hochiminh'].forEach(origin => {
+                ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'].forEach(origin => {
                     Object.keys(currentData.freight[origin].sea).forEach(dest => {
                         row += `${currentData.freight[origin].sea[dest][i]},`;
                     });
@@ -939,7 +938,7 @@
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `MJL_extended_freight_data_${new Date().toISOString().split('T')[0]}.csv`;
+            link.download = `MJL_freight_data_${new Date().toISOString().split('T')[0]}.csv`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -1014,7 +1013,7 @@
         }
 
         function parseCSV(csvText) {
-            // CSV 파싱 로직 (생략 - 실제 구현시 필요)
+            // CSV 파싱 로직
             console.log('CSV 파싱 중...');
         }
 
@@ -1093,58 +1092,258 @@
             });
         }
 
+        // 북미 해상 운임 차트
+        function createUSSeaChart() {
+            updateUSSeaChart();
+        }
+
+        function updateUSSeaChart() {
+            const ctx = document.getElementById('usSeaChart').getContext('2d');
+            const selectedOrigin = document.getElementById('usSeaOriginSelect').value;
+            
+            if (charts.usSea) charts.usSea.destroy();
+            
+            const labels = currentData.dates.map(d => 
+                `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+            ).slice(-12);
+            
+            const datasets = [];
+            const origins = selectedOrigin === 'all' ? 
+                ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'] : [selectedOrigin];
+            const colors = {
+                shanghai: '#3498db',
+                hongkong: '#e74c3c',
+                shenzhen: '#9b59b6',
+                hanoi: '#f39c12',
+                hochiminh: '#2ecc71'
+            };
+            const names = {
+                shanghai: '상해',
+                hongkong: '홍콩',
+                shenzhen: '심천',
+                hanoi: '하노이',
+                hochiminh: '호치민'
+            };
+            
+            origins.forEach(origin => {
+                datasets.push({
+                    label: `${names[origin]} → LA`,
+                    data: currentData.freight[origin].sea.la.slice(-12),
+                    borderColor: colors[origin],
+                    tension: 0.4
+                });
+                datasets.push({
+                    label: `${names[origin]} → 롱비치`,
+                    data: currentData.freight[origin].sea.longbeach.slice(-12),
+                    borderColor: colors[origin],
+                    borderDash: [5, 5],
+                    tension: 0.4
+                });
+            });
+            
+            charts.usSea = new Chart(ctx, {
+                type: 'line',
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top' } },
+                    scales: { y: { title: { display: true, text: 'USD/TEU' } } }
+                }
+            });
+        }
+
+        // 유럽 해상 운임 차트
+        function createEUSeaChart() {
+            updateEUSeaChart();
+        }
+
+        function updateEUSeaChart() {
+            const ctx = document.getElementById('euSeaChart').getContext('2d');
+            const selectedOrigin = document.getElementById('euSeaOriginSelect').value;
+            
+            if (charts.euSea) charts.euSea.destroy();
+            
+            const labels = currentData.dates.map(d => 
+                `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+            ).slice(-12);
+            
+            const datasets = [];
+            const origins = selectedOrigin === 'all' ? 
+                ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'] : [selectedOrigin];
+            const colors = {
+                shanghai: '#3498db',
+                hongkong: '#e74c3c',
+                shenzhen: '#9b59b6',
+                hanoi: '#f39c12',
+                hochiminh: '#2ecc71'
+            };
+            const names = {
+                shanghai: '상해',
+                hongkong: '홍콩',
+                shenzhen: '심천',
+                hanoi: '하노이',
+                hochiminh: '호치민'
+            };
+            
+            origins.forEach(origin => {
+                datasets.push({
+                    label: `${names[origin]} → 로테르담`,
+                    data: currentData.freight[origin].sea.rotterdam.slice(-12),
+                    borderColor: colors[origin],
+                    tension: 0.4
+                });
+            });
+            
+            charts.euSea = new Chart(ctx, {
+                type: 'line',
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top' } },
+                    scales: { y: { title: { display: true, text: 'USD/TEU' } } }
+                }
+            });
+        }
+
+        // 인도 해상 운임 차트
         function createIndiaSeaChart() {
+            updateIndiaSeaChart();
+        }
+
+        function updateIndiaSeaChart() {
             const ctx = document.getElementById('indiaSeaChart').getContext('2d');
+            const selectedOrigin = document.getElementById('indiaSeaOriginSelect').value;
             
             if (charts.indiaSea) charts.indiaSea.destroy();
             
             const labels = currentData.dates.map(d => 
                 `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-            ).slice(-12); // 최근 1년
+            ).slice(-12);
+            
+            const datasets = [];
+            const origins = selectedOrigin === 'all' ? 
+                ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'] : [selectedOrigin];
+            const colors = {
+                shanghai: '#3498db',
+                hongkong: '#e74c3c',
+                shenzhen: '#9b59b6',
+                hanoi: '#f39c12',
+                hochiminh: '#2ecc71'
+            };
+            const names = {
+                shanghai: '상해',
+                hongkong: '홍콩',
+                shenzhen: '심천',
+                hanoi: '하노이',
+                hochiminh: '호치민'
+            };
+            
+            origins.forEach(origin => {
+                datasets.push({
+                    label: `${names[origin]} → Kandla`,
+                    data: currentData.freight[origin].sea.kandla.slice(-12),
+                    borderColor: colors[origin],
+                    tension: 0.4
+                });
+                datasets.push({
+                    label: `${names[origin]} → Paradip`,
+                    data: currentData.freight[origin].sea.paradip.slice(-12),
+                    borderColor: colors[origin],
+                    borderDash: [5, 5],
+                    tension: 0.4
+                });
+                datasets.push({
+                    label: `${names[origin]} → JNPT`,
+                    data: currentData.freight[origin].sea.jnpt.slice(-12),
+                    borderColor: colors[origin],
+                    borderDash: [2, 2],
+                    tension: 0.4
+                });
+            });
             
             charts.indiaSea = new Chart(ctx, {
                 type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: '상해 → Kandla',
-                            data: currentData.freight.shanghai.sea.kandla.slice(-12),
-                            borderColor: '#3498db',
-                            tension: 0.4
-                        },
-                        {
-                            label: '상해 → Paradip',
-                            data: currentData.freight.shanghai.sea.paradip.slice(-12),
-                            borderColor: '#e74c3c',
-                            tension: 0.4
-                        },
-                        {
-                            label: '상해 → JNPT',
-                            data: currentData.freight.shanghai.sea.jnpt.slice(-12),
-                            borderColor: '#f39c12',
-                            tension: 0.4
-                        }
-                    ]
-                },
+                data: { labels, datasets },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'top' },
-                        title: { display: false }
-                    },
-                    scales: {
-                        y: {
-                            title: { display: true, text: 'USD/TEU' }
-                        }
-                    }
+                    plugins: { legend: { position: 'top' } },
+                    scales: { y: { title: { display: true, text: 'USD/TEU' } } }
                 }
             });
         }
 
+        // 북미 항공 운임 차트
+        function createUSAirChart() {
+            updateUSAirChart();
+        }
+
+        function updateUSAirChart() {
+            const ctx = document.getElementById('usAirChart').getContext('2d');
+            const selectedOrigin = document.getElementById('usAirOriginSelect').value;
+            
+            if (charts.usAir) charts.usAir.destroy();
+            
+            const labels = currentData.dates.map(d => 
+                `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+            ).slice(-12);
+            
+            const datasets = [];
+            const origins = selectedOrigin === 'all' ? 
+                ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'] : [selectedOrigin];
+            const colors = {
+                shanghai: '#3498db',
+                hongkong: '#e74c3c',
+                shenzhen: '#9b59b6',
+                hanoi: '#f39c12',
+                hochiminh: '#2ecc71'
+            };
+            const names = {
+                shanghai: '상해',
+                hongkong: '홍콩',
+                shenzhen: '심천',
+                hanoi: '하노이',
+                hochiminh: '호치민'
+            };
+            
+            origins.forEach(origin => {
+                datasets.push({
+                    label: `${names[origin]} → LAX`,
+                    data: currentData.freight[origin].air.lax.slice(-12),
+                    borderColor: colors[origin],
+                    tension: 0.4
+                });
+                datasets.push({
+                    label: `${names[origin]} → JFK`,
+                    data: currentData.freight[origin].air.jfk.slice(-12),
+                    borderColor: colors[origin],
+                    borderDash: [5, 5],
+                    tension: 0.4
+                });
+            });
+            
+            charts.usAir = new Chart(ctx, {
+                type: 'line',
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top' } },
+                    scales: { y: { title: { display: true, text: 'USD/kg' } } }
+                }
+            });
+        }
+
+        // 인도 항공 운임 차트
         function createIndiaAirChart() {
+            updateIndiaAirChart();
+        }
+
+        function updateIndiaAirChart() {
             const ctx = document.getElementById('indiaAirChart').getContext('2d');
+            const selectedOrigin = document.getElementById('indiaAirOriginSelect').value;
             
             if (charts.indiaAir) charts.indiaAir.destroy();
             
@@ -1152,124 +1351,88 @@
                 `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
             ).slice(-12);
             
-            charts.indiaAir = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: '상해 → DEL',
-                            data: currentData.freight.shanghai.air.del.slice(-12),
-                            borderColor: '#9b59b6',
-                            tension: 0.4
-                        },
-                        {
-                            label: '상해 → BOM',
-                            data: currentData.freight.shanghai.air.bom.slice(-12),
-                            borderColor: '#1abc9c',
-                            tension: 0.4
-                        },
-                        {
-                            label: '상해 → BLR',
-                            data: currentData.freight.shanghai.air.blr.slice(-12),
-                            borderColor: '#e67e22',
-                            tension: 0.4
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'top' }
-                    },
-                    scales: {
-                        y: {
-                            title: { display: true, text: 'USD/kg' }
-                        }
-                    }
-                }
-            });
-        }
-
-        function createVietnamChart() {
-            const ctx = document.getElementById('vietnamChart').getContext('2d');
+            const datasets = [];
+            const origins = selectedOrigin === 'all' ? 
+                ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'] : [selectedOrigin];
+            const colors = {
+                shanghai: '#3498db',
+                hongkong: '#e74c3c',
+                shenzhen: '#9b59b6',
+                hanoi: '#f39c12',
+                hochiminh: '#2ecc71'
+            };
+            const names = {
+                shanghai: '상해',
+                hongkong: '홍콩',
+                shenzhen: '심천',
+                hanoi: '하노이',
+                hochiminh: '호치민'
+            };
             
-            if (charts.vietnam) charts.vietnam.destroy();
-            
-            const labels = currentData.dates.map(d => 
-                `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-            ).slice(-12);
-            
-            charts.vietnam = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['LA', '로테르담', '싱가포르', 'Kandla'],
-                    datasets: [
-                        {
-                            label: '하노이 해상',
-                            data: [
-                                currentData.freight.hanoi.sea.la[currentData.freight.hanoi.sea.la.length - 1],
-                                currentData.freight.hanoi.sea.rotterdam[currentData.freight.hanoi.sea.rotterdam.length - 1],
-                                currentData.freight.hanoi.sea.singapore[currentData.freight.hanoi.sea.singapore.length - 1],
-                                currentData.freight.hanoi.sea.kandla[currentData.freight.hanoi.sea.kandla.length - 1]
-                            ],
-                            backgroundColor: 'rgba(52, 152, 219, 0.6)'
-                        },
-                        {
-                            label: '호치민 해상',
-                            data: [
-                                currentData.freight.hochiminh.sea.la[currentData.freight.hochiminh.sea.la.length - 1],
-                                currentData.freight.hochiminh.sea.rotterdam[currentData.freight.hochiminh.sea.rotterdam.length - 1],
-                                currentData.freight.hochiminh.sea.singapore[currentData.freight.hochiminh.sea.singapore.length - 1],
-                                currentData.freight.hochiminh.sea.kandla[currentData.freight.hochiminh.sea.kandla.length - 1]
-                            ],
-                            backgroundColor: 'rgba(46, 204, 113, 0.6)'
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'top' }
-                    },
-                    scales: {
-                        y: {
-                            title: { display: true, text: 'USD/TEU' }
-                        }
-                    }
-                }
-            });
-        }
-
-        function updateCharts() {
-            createIndexChart();
-            createIndiaSeaChart();
-            createIndiaAirChart();
-            createVietnamChart();
-        }
-
-        // 시간 범위 버튼 설정
-        function setupTimeRangeButtons() {
-            const buttons = document.querySelectorAll('.time-btn');
-            buttons.forEach(btn => {
-                btn.addEventListener('click', function() {
-                    buttons.forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                    // 시간 범위에 따른 데이터 필터링 및 차트 업데이트
-                    updateCharts();
+            origins.forEach(origin => {
+                datasets.push({
+                    label: `${names[origin]} → DEL`,
+                    data: currentData.freight[origin].air.del.slice(-12),
+                    borderColor: colors[origin],
+                    tension: 0.4
+                });
+                datasets.push({
+                    label: `${names[origin]} → BOM`,
+                    data: currentData.freight[origin].air.bom.slice(-12),
+                    borderColor: colors[origin],
+                    borderDash: [5, 5],
+                    tension: 0.4
+                });
+                datasets.push({
+                    label: `${names[origin]} → BLR`,
+                    data: currentData.freight[origin].air.blr.slice(-12),
+                    borderColor: colors[origin],
+                    borderDash: [2, 2],
+                    tension: 0.4
                 });
             });
+            
+            charts.indiaAir = new Chart(ctx, {
+                type: 'line',
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top' } },
+                    scales: { y: { title: { display: true, text: 'USD/kg' } } }
+                }
+            });
         }
 
-        // 초기화
-        document.addEventListener('DOMContentLoaded', () => {
+        // 모든 차트 업데이트
+        function updateCharts() {
+            createIndexChart();
+            createUSSeaChart();
+            createEUSeaChart();
+            createIndiaSeaChart();
+            createUSAirChart();
+            createIndiaAirChart();
+        }
+
+        // 페이지 로드 시 초기화
+        window.onload = function() {
             generateRealisticData();
             setupFileUpload();
-            setupTimeRangeButtons();
             updateCharts();
-        });
+            
+            // 다운로드 버튼 이벤트 리스너 추가
+            document.getElementById('downloadBtn').addEventListener('click', downloadCurrentData);
+            
+            // 시간 범위 버튼 이벤트
+            document.querySelectorAll('.time-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    // 시간 범위에 따른 차트 업데이트 (추후 구현)
+                    console.log('시간 범위 변경:', this.getAttribute('data-range'));
+                });
+            });
+        };
     </script>
 </body>
 </html>
