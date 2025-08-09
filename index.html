@@ -500,7 +500,16 @@
         </div>
 
         <div class="freight-table">
-            <h3 class="chart-title">📊 2025년 1월 운임 현황</h3>
+            <h3 class="chart-title">📊 운임 현황 <span id="rateDate" style="color: #e74c3c; font-size: 0.9em;">(2025년 1월 21일 기준)</span></h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <div style="font-size: 0.85em; color: #7f8c8d;">
+                    <span style="margin-right: 15px;">📅 유효기간: 2025.01.21 ~ 2025.01.27</span>
+                    <span style="background: #fff3cd; color: #856404; padding: 3px 8px; border-radius: 5px; font-weight: 600;">주간 단위 업데이트</span>
+                </div>
+                <div>
+                    <button onclick="updateRateDate()" style="padding: 5px 12px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 0.85em;">🔄 날짜 업데이트</button>
+                </div>
+            </div>
             
             <div class="tabs">
                 <button class="tab active" onclick="switchTab('sea')">🚢 해상 운임</button>
