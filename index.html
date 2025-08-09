@@ -509,7 +509,6 @@
         <div class="freight-table">
             <h3 class="chart-title">📊 운임 현황 <span id="rateDate" style="color: #e74c3c; font-size: 0.9em;">(2025년 1월 21일 기준)</span></h3>
             <div class="date-update-section">
-                <input type="date" id="dateInput" class="date-input" value="2025-01-21">
                 <button id="updateDateBtn" class="update-date-btn">🔄 날짜 업데이트</button>
             </div>
             
@@ -852,16 +851,21 @@
 
         // 날짜 업데이트 함수
         function updateRateDate() {
-            const dateInput = document.getElementById('dateInput');
             const rateDate = document.getElementById('rateDate');
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = today.getMonth() + 1;
+            const day = today.getDate();
             
-            if (dateInput.value) {
-                const date = new Date(dateInput.value);
-                const year = date.getFullYear();
-                const month = date.getMonth() + 1;
-                const day = date.getDate();
-                
-                rateDate.textContent = `(${year}년 ${month}월 ${day}일 기준)`;
+            rateDate.textContent = `(${year}년 ${month}월 ${day}일 기준)`;
+            
+            // 최신 데이터로 메트릭스 업데이트
+            if (currentData.dates.length > 0) {
+                const lastIdx = currentData.dates.length - 1;
+                document.querySelector('.metric-card:nth-child(1) .metric-value').textContent = currentData.indices.BDI[lastIdx] || '1,140';
+                document.querySelector('.metric-card:nth-child(2) .metric-value').textContent = currentData.indices.SCFI[lastIdx] || '984.73';
+                document.querySelector('.metric-card:nth-child(3) .metric-value').textContent = currentData.indices.CCFI[lastIdx] || '962.64';
+                document.querySelector('.metric-card:nth-child(4) .metric-value').textContent = currentData.indices.HRCI[lastIdx] || '635.6';
             }
         }
 
@@ -1045,8 +1049,162 @@
         }
 
         function parseCSV(csvText) {
-            // CSV 파싱 로직
-            console.log('CSV 파싱 중...');
+            try {
+                // CSV 파싱
+                const lines = csvText.split('\n').filter(line => line.trim());
+                if (lines.length < 2) {
+                    throw new Error('CSV 파일에 데이터가 부족합니다.');
+                }
+                
+                // 데이터 초기화
+                currentData.dates = [];
+                currentData.indices = { BDI: [], SCFI: [], CCFI: [], HRCI: [] };
+                
+                // 각 출발지별 초기화
+                const origins = ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'];
+                origins.forEach(origin => {
+                    currentData.freight[origin] = {
+                        sea: { la: [], longbeach: [], rotterdam: [], kandla: [], paradip: [], jnpt: [] },
+                        air: { lax: [], jfk: [], vie: [], del: [], bom: [], blr: [] }
+                    };
+                });
+                
+                // 헤더 스킵하고 데이터 파싱
+                for (let i = 1; i < lines.length; i++) {
+                    const cols = lines[i].split(',');
+                    if (cols.length < 65) continue; // 데이터가 부족한 행은 스킵
+                    
+                    // 날짜 파싱
+                    currentData.dates.push(new Date(cols[0]));
+                    
+                    // 지수 데이터 파싱
+                    currentData.indices.BDI.push(parseFloat(cols[1]) || 0);
+                    currentData.indices.SCFI.push(parseFloat(cols[2]) || 0);
+                    currentData.indices.CCFI.push(parseFloat(cols[3]) || 0);
+                    currentData.indices.HRCI.push(parseFloat(cols[4]) || 0);
+                    
+                    // 운임 데이터 파싱
+                    let colIdx = 5;
+                    origins.forEach(origin => {
+                        // 해상 운임 (6개 도착지)
+                        currentData.freight[origin].sea.la.push(parseFloat(cols[colIdx++]) || 0);
+                        currentData.freight[origin].sea.longbeach.push(parseFloat(cols[colIdx++]) || 0);
+                        currentData.freight[origin].sea.rotterdam.push(parseFloat(cols[colIdx++]) || 0);
+                        currentData.freight[origin].sea.kandla.push(parseFloat(cols[colIdx++]) || 0);
+                        currentData.freight[origin].sea.paradip.push(parseFloat(cols[colIdx++]) || 0);
+                        currentData.freight[origin].sea.jnpt.push(parseFloat(cols[colIdx++]) || 0);
+                        
+                        // 항공 운임 (6개 도착지)
+                        currentData.freight[origin].air.lax.push(parseFloat(cols[colIdx++]) || 0);
+                        currentData.freight[origin].air.jfk.push(parseFloat(cols[colIdx++]) || 0);
+                        currentData.freight[origin].air.vie.push(parseFloat(cols[colIdx++]) || 0);
+                        currentData.freight[origin].air.del.push(parseFloat(cols[colIdx++]) || 0);
+                        currentData.freight[origin].air.bom.push(parseFloat(cols[colIdx++]) || 0);
+                        currentData.freight[origin].air.blr.push(parseFloat(cols[colIdx++]) || 0);
+                    });
+                }
+                
+                // 최신 데이터로 메트릭스 카드 업데이트
+                if (currentData.dates.length > 0) {
+                    const lastIdx = currentData.dates.length - 1;
+                    const prevIdx = Math.max(0, lastIdx - 1);
+                    
+                    // BDI 업데이트
+                    const bdiValue = currentData.indices.BDI[lastIdx];
+                    const bdiPrev = currentData.indices.BDI[prevIdx];
+                    const bdiChange = ((bdiValue - bdiPrev) / bdiPrev * 100).toFixed(1);
+                    document.querySelector('.metric-card:nth-child(1) .metric-value').textContent = bdiValue.toLocaleString();
+                    const bdiChangeEl = document.querySelector('.metric-card:nth-child(1) .metric-change');
+                    bdiChangeEl.textContent = `${bdiChange > 0 ? '▲' : '▼'} ${Math.abs(bdiChange)}%`;
+                    bdiChangeEl.className = `metric-change ${bdiChange > 0 ? 'positive' : 'negative'}`;
+                    
+                    // SCFI 업데이트
+                    const scfiValue = currentData.indices.SCFI[lastIdx];
+                    const scfiPrev = currentData.indices.SCFI[prevIdx];
+                    const scfiChange = ((scfiValue - scfiPrev) / scfiPrev * 100).toFixed(1);
+                    document.querySelector('.metric-card:nth-child(2) .metric-value').textContent = scfiValue.toFixed(2);
+                    const scfiChangeEl = document.querySelector('.metric-card:nth-child(2) .metric-change');
+                    scfiChangeEl.textContent = `${scfiChange > 0 ? '▲' : '▼'} ${Math.abs(scfiChange)}%`;
+                    scfiChangeEl.className = `metric-change ${scfiChange > 0 ? 'positive' : 'negative'}`;
+                    
+                    // CCFI 업데이트
+                    const ccfiValue = currentData.indices.CCFI[lastIdx];
+                    const ccfiPrev = currentData.indices.CCFI[prevIdx];
+                    const ccfiChange = ((ccfiValue - ccfiPrev) / ccfiPrev * 100).toFixed(1);
+                    document.querySelector('.metric-card:nth-child(3) .metric-value').textContent = ccfiValue.toFixed(2);
+                    const ccfiChangeEl = document.querySelector('.metric-card:nth-child(3) .metric-change');
+                    ccfiChangeEl.textContent = `${ccfiChange > 0 ? '▲' : '▼'} ${Math.abs(ccfiChange)}%`;
+                    ccfiChangeEl.className = `metric-change ${ccfiChange > 0 ? 'positive' : 'negative'}`;
+                    
+                    // HRCI 업데이트
+                    const hrciValue = currentData.indices.HRCI[lastIdx];
+                    const hrciPrev = currentData.indices.HRCI[prevIdx];
+                    const hrciChange = ((hrciValue - hrciPrev) / hrciPrev * 100).toFixed(1);
+                    document.querySelector('.metric-card:nth-child(4) .metric-value').textContent = hrciValue.toFixed(1);
+                    const hrciChangeEl = document.querySelector('.metric-card:nth-child(4) .metric-change');
+                    hrciChangeEl.textContent = `${hrciChange > 0 ? '▲' : '▼'} ${Math.abs(hrciChange)}%`;
+                    hrciChangeEl.className = `metric-change ${hrciChange > 0 ? 'positive' : 'negative'}`;
+                    
+                    // 운임 테이블 업데이트
+                    updateFreightTables(lastIdx);
+                }
+                
+                // 차트 업데이트
+                updateCharts(currentTimeRange);
+                analyzeFreightChanges(currentTimeRange);
+                
+                console.log('CSV 파싱 완료:', currentData.dates.length, '개 데이터 포인트');
+            } catch (error) {
+                console.error('CSV 파싱 오류:', error);
+                throw error;
+            }
+        }
+        
+        // 운임 테이블 업데이트 함수
+        function updateFreightTables(idx) {
+            // 해상 운임 테이블 업데이트
+            const seaTable = document.querySelector('#seaTab tbody');
+            if (seaTable) {
+                const origins = ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'];
+                const originNames = ['🇨🇳 상해', '🇭🇰 홍콩', '🇨🇳 심천', '🇻🇳 하노이', '🇻🇳 호치민'];
+                
+                seaTable.innerHTML = '';
+                origins.forEach((origin, i) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td style="font-weight: bold;">${originNames[i]}</td>
+                        <td>${currentData.freight[origin].sea.la[idx]?.toLocaleString() || '0'}</td>
+                        <td>${currentData.freight[origin].sea.longbeach[idx]?.toLocaleString() || '0'}</td>
+                        <td>${currentData.freight[origin].sea.rotterdam[idx]?.toLocaleString() || '0'}</td>
+                        <td>${currentData.freight[origin].sea.kandla[idx]?.toLocaleString() || '0'}</td>
+                        <td>${currentData.freight[origin].sea.paradip[idx]?.toLocaleString() || '0'}</td>
+                        <td>${currentData.freight[origin].sea.jnpt[idx]?.toLocaleString() || '0'}</td>
+                    `;
+                    seaTable.appendChild(row);
+                });
+            }
+            
+            // 항공 운임 테이블 업데이트
+            const airTable = document.querySelector('#airTab tbody');
+            if (airTable) {
+                const origins = ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'];
+                const originNames = ['🇨🇳 상해', '🇭🇰 홍콩', '🇨🇳 심천', '🇻🇳 하노이', '🇻🇳 호치민'];
+                
+                airTable.innerHTML = '';
+                origins.forEach((origin, i) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td style="font-weight: bold;">${originNames[i]}</td>
+                        <td>${currentData.freight[origin].air.lax[idx]?.toFixed(2) || '0.00'}</td>
+                        <td>${currentData.freight[origin].air.jfk[idx]?.toFixed(2) || '0.00'}</td>
+                        <td>${currentData.freight[origin].air.vie[idx]?.toFixed(2) || '0.00'}</td>
+                        <td>${currentData.freight[origin].air.del[idx]?.toFixed(2) || '0.00'}</td>
+                        <td>${currentData.freight[origin].air.bom[idx]?.toFixed(2) || '0.00'}</td>
+                        <td>${currentData.freight[origin].air.blr[idx]?.toFixed(2) || '0.00'}</td>
+                    `;
+                    airTable.appendChild(row);
+                });
+            }
         }
 
         // 차트 생성 함수들
@@ -1615,8 +1773,7 @@
                 <div style="background: white; padding: 15px; border-radius: 10px; border-left: 4px solid #e74c3c;">
                     <h4 style="color: #2c3e50; margin-bottom: 10px;">🚢 북미 해상 운임 변동</h4>
                     <div style="color: #34495e; line-height: 1.6; font-size: 0.9em;">
-                        ${routeAnalysis.usSeaShanghai}<br><br>
-                        ${routeAnalysis.usSeaPattern}
+                        ${routeAnalysis.usSeaShanghai}
                     </div>
                 </div>
             `;
@@ -1626,8 +1783,7 @@
                 <div style="background: white; padding: 15px; border-radius: 10px; border-left: 4px solid #f39c12;">
                     <h4 style="color: #2c3e50; margin-bottom: 10px;">🌍 유럽 해상 운임 변동</h4>
                     <div style="color: #34495e; line-height: 1.6; font-size: 0.9em;">
-                        ${routeAnalysis.euSeaShanghai}<br><br>
-                        ${routeAnalysis.euSeaPattern}
+                        ${routeAnalysis.euSeaShanghai}
                     </div>
                 </div>
             `;
@@ -1646,10 +1802,12 @@
             analysisContent.innerHTML = analysisHTML;
         }
         
-        // 지수 분석 함수
+        // 지수 분석 함수 - 수치 중심
         function analyzeIndices(start, points) {
             const bdiData = currentData.indices.BDI.slice(start);
             const scfiData = currentData.indices.SCFI.slice(start);
+            const ccfiData = currentData.indices.CCFI.slice(start);
+            const hrciData = currentData.indices.HRCI.slice(start);
             
             if (bdiData.length < 2) {
                 return {
@@ -1659,100 +1817,142 @@
                 };
             }
             
-            // BDI 분석
+            // BDI 상세 분석
             const bdiStart = bdiData[0];
             const bdiEnd = bdiData[bdiData.length - 1];
             const bdiMax = Math.max(...bdiData);
             const bdiMin = Math.min(...bdiData);
-            const bdiMaxIdx = bdiData.indexOf(bdiMax);
-            const bdiMinIdx = bdiData.indexOf(bdiMin);
+            const bdiAvg = (bdiData.reduce((a, b) => a + b, 0) / bdiData.length).toFixed(0);
+            const bdiChange = ((bdiEnd - bdiStart) / bdiStart * 100).toFixed(1);
+            const bdiVolatility = ((bdiMax - bdiMin) / bdiAvg * 100).toFixed(1);
             
-            let bdiAnalysis = `<strong>BDI 지수:</strong> ${bdiStart}에서 시작하여 `;
+            let bdiAnalysis = `<strong>BDI 지수 상세:</strong><br>`;
+            bdiAnalysis += `• 시작값: ${bdiStart.toLocaleString()} → 종료값: ${bdiEnd.toLocaleString()} (변동률: ${bdiChange}%)<br>`;
+            bdiAnalysis += `• 최고값: ${bdiMax.toLocaleString()} / 최저값: ${bdiMin.toLocaleString()}<br>`;
+            bdiAnalysis += `• 평균값: ${bdiAvg} / 변동성: ${bdiVolatility}%<br>`;
+            bdiAnalysis += `• 최고-최저 차이: ${(bdiMax - bdiMin).toLocaleString()} (${((bdiMax - bdiMin) / bdiMin * 100).toFixed(1)}%)`;
             
-            if (bdiMaxIdx < bdiMinIdx) {
-                bdiAnalysis += `${Math.round(bdiMaxIdx / bdiData.length * 100)}% 시점에 최고점 ${bdiMax}를 기록한 후 하락하여, `;
-                bdiAnalysis += `${Math.round(bdiMinIdx / bdiData.length * 100)}% 시점에 최저점 ${bdiMin}까지 하락했다가 `;
-            } else {
-                bdiAnalysis += `${Math.round(bdiMinIdx / bdiData.length * 100)}% 시점에 최저점 ${bdiMin}까지 하락한 후 회복하여, `;
-                bdiAnalysis += `${Math.round(bdiMaxIdx / bdiData.length * 100)}% 시점에 최고점 ${bdiMax}를 기록했다가 `;
-            }
-            bdiAnalysis += `현재 ${bdiEnd}로 마감 (총 ${((bdiEnd - bdiStart) / bdiStart * 100).toFixed(1)}% 변동)`;
-            
-            // SCFI 분석
+            // SCFI 상세 분석
             const scfiStart = scfiData[0];
             const scfiEnd = scfiData[scfiData.length - 1];
+            const scfiMax = Math.max(...scfiData);
+            const scfiMin = Math.min(...scfiData);
+            const scfiAvg = (scfiData.reduce((a, b) => a + b, 0) / scfiData.length).toFixed(2);
             const scfiChange = ((scfiEnd - scfiStart) / scfiStart * 100).toFixed(1);
             
-            let scfiAnalysis = `<strong>SCFI 지수:</strong> ${scfiStart}에서 ${scfiEnd}로 ${scfiChange > 0 ? '상승' : '하락'} (${Math.abs(scfiChange)}%)`;
+            let scfiAnalysis = `<strong>SCFI 지수 상세:</strong><br>`;
+            scfiAnalysis += `• 시작값: ${scfiStart.toFixed(2)} → 종료값: ${scfiEnd.toFixed(2)} (변동률: ${scfiChange}%)<br>`;
+            scfiAnalysis += `• 최고값: ${scfiMax.toFixed(2)} / 최저값: ${scfiMin.toFixed(2)}<br>`;
+            scfiAnalysis += `• 평균값: ${scfiAvg} / 표준편차: ${calculateStdDev(scfiData).toFixed(2)}`;
             
-            // 종합 분석
-            let summary = '';
-            if (bdiEnd < bdiStart && scfiEnd < scfiStart) {
-                summary = '📉 전반적으로 해운 시장이 약세를 보이며 운임이 하락하는 추세입니다.';
-            } else if (bdiEnd > bdiStart && scfiEnd > scfiStart) {
-                summary = '📈 해운 시장이 강세를 보이며 운임이 상승하는 추세입니다.';
-            } else {
-                summary = '📊 벌크선과 컨테이너선 시장이 엇갈린 움직임을 보이고 있습니다.';
-            }
+            // CCFI/HRCI 추가 분석
+            const ccfiChange = ((ccfiData[ccfiData.length - 1] - ccfiData[0]) / ccfiData[0] * 100).toFixed(1);
+            const hrciChange = ((hrciData[hrciData.length - 1] - hrciData[0]) / hrciData[0] * 100).toFixed(1);
+            
+            let summary = `<strong>종합 지수 변동:</strong><br>`;
+            summary += `• BDI: ${bdiChange}% / SCFI: ${scfiChange}%<br>`;
+            summary += `• CCFI: ${ccfiChange}% / HRCI: ${hrciChange}%<br>`;
+            summary += `• 전체 평균 변동률: ${((parseFloat(bdiChange) + parseFloat(scfiChange) + parseFloat(ccfiChange) + parseFloat(hrciChange)) / 4).toFixed(1)}%`;
             
             return { bdi: bdiAnalysis, scfi: scfiAnalysis, summary };
         }
         
-        // 주요 노선 분석 함수
+        // 표준편차 계산 함수
+        function calculateStdDev(values) {
+            const avg = values.reduce((a, b) => a + b, 0) / values.length;
+            const squareDiffs = values.map(value => Math.pow(value - avg, 2));
+            const avgSquareDiff = squareDiffs.reduce((a, b) => a + b, 0) / values.length;
+            return Math.sqrt(avgSquareDiff);
+        }
+        
+        // 주요 노선 분석 함수 - 수치 중심
         function analyzeMainRoutes(start, points) {
-            // 상해-LA 해상 운임
-            const shanghaiLA = currentData.freight.shanghai.sea.la.slice(start);
-            const shanghaiRotterdam = currentData.freight.shanghai.sea.rotterdam.slice(start);
-            const shanghaiLAX = currentData.freight.shanghai.air.lax.slice(start);
+            const origins = ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'];
+            const originNames = { shanghai: '상해', hongkong: '홍콩', shenzhen: '심천', hanoi: '하노이', hochiminh: '호치민' };
             
-            if (shanghaiLA.length < 2) {
-                return {
-                    usSeaShanghai: '데이터 부족',
-                    usSeaPattern: '',
-                    euSeaShanghai: '데이터 부족',
-                    euSeaPattern: '',
-                    airFreight: '데이터 부족',
-                    airPattern: ''
-                };
+            // 북미 해상 운임 상세 분석
+            let usSeaAnalysis = '<strong>북미 해상 운임 상세 (USD/TEU):</strong><br>';
+            let usSeaData = {};
+            
+            origins.forEach(origin => {
+                const laData = currentData.freight[origin].sea.la.slice(start);
+                const lbData = currentData.freight[origin].sea.longbeach.slice(start);
+                
+                if (laData.length > 1) {
+                    const laStart = laData[0];
+                    const laEnd = laData[laData.length - 1];
+                    const laAvg = (laData.reduce((a, b) => a + b, 0) / laData.length).toFixed(0);
+                    const laChange = ((laEnd - laStart) / laStart * 100).toFixed(1);
+                    
+                    usSeaData[origin] = { start: laStart, end: laEnd, avg: laAvg, change: laChange };
+                    usSeaAnalysis += `• ${originNames[origin]}→LA: ${laStart} → ${laEnd} (${laChange}%, 평균: ${laAvg})<br>`;
+                }
+            });
+            
+            // 유럽 해상 운임 상세 분석
+            let euSeaAnalysis = '<strong>유럽 해상 운임 상세 (USD/TEU):</strong><br>';
+            let euSeaData = {};
+            
+            origins.forEach(origin => {
+                const rotterdamData = currentData.freight[origin].sea.rotterdam.slice(start);
+                
+                if (rotterdamData.length > 1) {
+                    const start = rotterdamData[0];
+                    const end = rotterdamData[rotterdamData.length - 1];
+                    const max = Math.max(...rotterdamData);
+                    const min = Math.min(...rotterdamData);
+                    const avg = (rotterdamData.reduce((a, b) => a + b, 0) / rotterdamData.length).toFixed(0);
+                    const change = ((end - start) / start * 100).toFixed(1);
+                    
+                    euSeaData[origin] = { start, end, max, min, avg, change };
+                    euSeaAnalysis += `• ${originNames[origin]}→로테르담: ${start} → ${end} (${change}%)<br>`;
+                    euSeaAnalysis += `  최고: ${max} / 최저: ${min} / 평균: ${avg}<br>`;
+                }
+            });
+            
+            // 항공 운임 상세 분석
+            let airFreightAnalysis = '<strong>항공 운임 상세 (USD/kg):</strong><br>';
+            
+            origins.forEach(origin => {
+                const laxData = currentData.freight[origin].air.lax.slice(start);
+                const jfkData = currentData.freight[origin].air.jfk.slice(start);
+                
+                if (laxData.length > 1) {
+                    const laxStart = laxData[0];
+                    const laxEnd = laxData[laxData.length - 1];
+                    const laxChange = ((laxEnd - laxStart) / laxStart * 100).toFixed(1);
+                    
+                    airFreightAnalysis += `• ${originNames[origin]}→LAX: ${laxStart.toFixed(2)} → ${laxEnd.toFixed(2)} (${laxChange}%)<br>`;
+                }
+            });
+            
+            // 운임 격차 분석
+            let gapAnalysis = '<strong>출발지별 운임 격차:</strong><br>';
+            if (Object.keys(usSeaData).length > 0) {
+                const avgRates = Object.values(usSeaData).map(d => parseFloat(d.avg));
+                const maxAvg = Math.max(...avgRates);
+                const minAvg = Math.min(...avgRates);
+                const gap = ((maxAvg - minAvg) / minAvg * 100).toFixed(1);
+                gapAnalysis += `• 북미 해상: 최고-최저 평균 운임 격차 ${gap}%<br>`;
+                gapAnalysis += `  (최고: ${maxAvg} / 최저: ${minAvg})<br>`;
             }
             
-            // 미국 해상 운임 분석
-            const usStart = shanghaiLA[0];
-            const usEnd = shanghaiLA[shanghaiLA.length - 1];
-            const usMax = Math.max(...shanghaiLA);
-            const usMin = Math.min(...shanghaiLA);
-            const usMid = Math.floor(shanghaiLA.length / 2);
-            const usMidValue = shanghaiLA[usMid];
-            
-            let usSeaShanghai = `<strong>상해→LA:</strong> ${usStart}/TEU에서 시작, `;
-            if (usMidValue > usStart) {
-                usSeaShanghai += `중반기 ${usMidValue}/TEU까지 상승 후 `;
-            } else {
-                usSeaShanghai += `중반기 ${usMidValue}/TEU로 하락 후 `;
+            if (Object.keys(euSeaData).length > 0) {
+                const avgRates = Object.values(euSeaData).map(d => parseFloat(d.avg));
+                const maxAvg = Math.max(...avgRates);
+                const minAvg = Math.min(...avgRates);
+                const gap = ((maxAvg - minAvg) / minAvg * 100).toFixed(1);
+                gapAnalysis += `• 유럽 해상: 최고-최저 평균 운임 격차 ${gap}%<br>`;
+                gapAnalysis += `  (최고: ${maxAvg} / 최저: ${minAvg})`;
             }
-            usSeaShanghai += `현재 ${usEnd}/TEU (변동폭: ${usMin}~${usMax})`;
-            
-            let usSeaPattern = '베트남 출발 운임이 중국 출발 대비 평균 10-15% 저렴하게 형성되고 있습니다.';
-            
-            // 유럽 해상 운임 분석
-            const euStart = shanghaiRotterdam[0];
-            const euEnd = shanghaiRotterdam[shanghaiRotterdam.length - 1];
-            let euSeaShanghai = `<strong>상해→로테르담:</strong> ${euStart}/TEU → ${euEnd}/TEU (${((euEnd - euStart) / euStart * 100).toFixed(1)}% 변동)`;
-            let euSeaPattern = '유럽 노선은 북미 대비 높은 운임을 유지하며, 홍해 우회 영향이 지속되고 있습니다.';
-            
-            // 항공 운임 분석
-            const airStart = shanghaiLAX[0];
-            const airEnd = shanghaiLAX[shanghaiLAX.length - 1];
-            let airFreight = `<strong>상해→LAX:</strong> ${airStart}/kg → ${airEnd}/kg`;
-            let airPattern = '항공 운임은 해상 운임 대비 안정적인 움직임을 보이고 있습니다.';
             
             return {
-                usSeaShanghai,
-                usSeaPattern,
-                euSeaShanghai,
-                euSeaPattern,
-                airFreight,
-                airPattern
+                usSeaShanghai: usSeaAnalysis,
+                usSeaPattern: gapAnalysis,
+                euSeaShanghai: euSeaAnalysis,
+                euSeaPattern: '',
+                airFreight: airFreightAnalysis,
+                airPattern: ''
             };
         }
         
