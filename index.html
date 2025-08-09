@@ -436,16 +436,19 @@
             <h1>🚢 ✈️ MJL 아시아발 글로벌 물류 운임 대시보드</h1>
             <div class="subtitle">MJ LOGISTICS GLOBAL FREIGHT RATE DASHBOARD</div>
             <div class="update-info">
-                <span class="update-time" id="updateTime">마지막 업데이트: 2025년 1월 21일</span>
+                <span class="update-time" id="updateTime">마지막 업데이트: 2025년 1월 21일 14:30</span>
                 <span class="data-status">아시아(중국/베트남) → 북미/유럽/인도</span>
+                <span style="background: #f39c12; color: white; padding: 3px 10px; border-radius: 15px; font-size: 0.85em;">Weekly Update</span>
             </div>
         </div>
 
         <div class="demo-notice">
-            📊 2025년 1월 최신 해운 지수 및 운임 데이터
-            <br>• BDI: 1,140 | SCFI: 984.73 | CCFI: 962.64 | HRCI: 635.6 (2025년 1월 17일 기준)
+            📊 해운 지수 및 운임 데이터 
+            <span style="background: #e74c3c; color: white; padding: 2px 8px; border-radius: 5px; font-weight: 600;">2025년 1월 21일 기준</span>
+            <br>• BDI: 1,140 | SCFI: 984.73 | CCFI: 962.64 | HRCI: 635.6
             <br>• 출발지: 상해, 홍콩, 심천, 하노이, 호치민
             <br>• 도착지: 북미(LA, 롱비치), 유럽(로테르담), 인도(Kandla, Paradip, JNPT)
+            <br><span style="color: #e74c3c; font-weight: 600;">⚠️ 운임은 주간 단위로 변동되며, 성수기/유가/시장 상황에 따라 ±10~30% 변동 가능</span>
         </div>
 
         <div class="control-panel">
@@ -501,11 +504,7 @@
 
         <div class="freight-table">
             <h3 class="chart-title">📊 운임 현황 <span id="rateDate" style="color: #e74c3c; font-size: 0.9em;">(2025년 1월 21일 기준)</span></h3>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <div style="font-size: 0.85em; color: #7f8c8d;">
-                    <span style="margin-right: 15px;">📅 유효기간: 2025.01.21 ~ 2025.01.27</span>
-                    <span style="background: #fff3cd; color: #856404; padding: 3px 8px; border-radius: 5px; font-weight: 600;">주간 단위 업데이트</span>
-                </div>
+            <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 15px;">
                 <div>
                     <button onclick="updateRateDate()" style="padding: 5px 12px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 0.85em;">🔄 날짜 업데이트</button>
                 </div>
@@ -661,7 +660,7 @@
 
         <div class="charts-grid">
             <div class="chart-container">
-                <h3 class="chart-title">📈 해운 지수 추이 (2024-2025)</h3>
+                <h3 class="chart-title">📈 해운 지수 추이 <span id="indexChartPeriod" style="color: #7f8c8d; font-size: 0.9em;"></span></h3>
                 <div class="chart-canvas">
                     <canvas id="indexChart"></canvas>
                 </div>
@@ -671,7 +670,7 @@
                 <h3 class="chart-title">🚢 북미 해상 운임 비교</h3>
                 <div class="origin-selector">
                     <label>출발지: </label>
-                    <select id="usSeaOriginSelect" onchange="updateUSSeaChart()">
+                    <select id="usSeaOriginSelect" onchange="updateUSSeaChart(currentTimeRange)">
                         <option value="all">전체</option>
                         <option value="shanghai">상해</option>
                         <option value="hongkong">홍콩</option>
@@ -691,7 +690,7 @@
                 <h3 class="chart-title">🚢 유럽 해상 운임 비교</h3>
                 <div class="origin-selector">
                     <label>출발지: </label>
-                    <select id="euSeaOriginSelect" onchange="updateEUSeaChart()">
+                    <select id="euSeaOriginSelect" onchange="updateEUSeaChart(currentTimeRange)">
                         <option value="all">전체</option>
                         <option value="shanghai">상해</option>
                         <option value="hongkong">홍콩</option>
@@ -709,7 +708,7 @@
                 <h3 class="chart-title">🚢 인도 해상 운임 비교</h3>
                 <div class="origin-selector">
                     <label>출발지: </label>
-                    <select id="indiaSeaOriginSelect" onchange="updateIndiaSeaChart()">
+                    <select id="indiaSeaOriginSelect" onchange="updateIndiaSeaChart(currentTimeRange)">
                         <option value="all">전체</option>
                         <option value="shanghai">상해</option>
                         <option value="hongkong">홍콩</option>
@@ -729,7 +728,7 @@
                 <h3 class="chart-title">✈️ 북미 항공 운임 비교</h3>
                 <div class="origin-selector">
                     <label>출발지: </label>
-                    <select id="usAirOriginSelect" onchange="updateUSAirChart()">
+                    <select id="usAirOriginSelect" onchange="updateUSAirChart(currentTimeRange)">
                         <option value="all">전체</option>
                         <option value="shanghai">상해</option>
                         <option value="hongkong">홍콩</option>
@@ -747,7 +746,7 @@
                 <h3 class="chart-title">✈️ 인도 항공 운임 비교</h3>
                 <div class="origin-selector">
                     <label>출발지: </label>
-                    <select id="indiaAirOriginSelect" onchange="updateIndiaAirChart()">
+                    <select id="indiaAirOriginSelect" onchange="updateIndiaAirChart(currentTimeRange)">
                         <option value="all">전체</option>
                         <option value="shanghai">상해</option>
                         <option value="hongkong">홍콩</option>
@@ -1027,23 +1026,65 @@
         }
 
         // 차트 생성 함수들
-        function createIndexChart() {
+        function createIndexChart(timeRange = '1Y') {
             const ctx = document.getElementById('indexChart').getContext('2d');
             
             if (charts.index) charts.index.destroy();
+            
+            // 시간 범위에 따른 데이터 필터링
+            let dataPoints = 52; // 기본 1년
+            let periodText = '';
+            const endDate = new Date();
+            let startDate = new Date();
+            
+            switch(timeRange) {
+                case '3M':
+                    dataPoints = 12;
+                    startDate.setMonth(endDate.getMonth() - 3);
+                    periodText = `(${startDate.getFullYear()}.${String(startDate.getMonth() + 1).padStart(2, '0')} - ${endDate.getFullYear()}.${String(endDate.getMonth() + 1).padStart(2, '0')})`;
+                    break;
+                case '6M':
+                    dataPoints = 26;
+                    startDate.setMonth(endDate.getMonth() - 6);
+                    periodText = `(${startDate.getFullYear()}.${String(startDate.getMonth() + 1).padStart(2, '0')} - ${endDate.getFullYear()}.${String(endDate.getMonth() + 1).padStart(2, '0')})`;
+                    break;
+                case '1Y':
+                    dataPoints = 52;
+                    startDate.setFullYear(endDate.getFullYear() - 1);
+                    periodText = `(${startDate.getFullYear()} - ${endDate.getFullYear()})`;
+                    break;
+                case '2Y':
+                    dataPoints = 104;
+                    startDate.setFullYear(endDate.getFullYear() - 2);
+                    periodText = `(${startDate.getFullYear()} - ${endDate.getFullYear()})`;
+                    break;
+                case 'Max':
+                    dataPoints = currentData.dates.length;
+                    if (currentData.dates.length > 0) {
+                        startDate = currentData.dates[0];
+                        periodText = `(${startDate.getFullYear()} - ${endDate.getFullYear()})`;
+                    }
+                    break;
+            }
+            
+            // 기간 텍스트 업데이트
+            document.getElementById('indexChartPeriod').textContent = periodText;
             
             const labels = currentData.dates.map(d => 
                 `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
             );
             
+            // 데이터 슬라이싱
+            const sliceStart = Math.max(0, labels.length - dataPoints);
+            
             charts.index = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: labels.slice(-52), // 최근 1년
+                    labels: labels.slice(sliceStart),
                     datasets: [
                         {
                             label: 'BDI',
-                            data: currentData.indices.BDI.slice(-52),
+                            data: currentData.indices.BDI.slice(sliceStart),
                             borderColor: '#3498db',
                             backgroundColor: 'rgba(52, 152, 219, 0.1)',
                             tension: 0.4,
@@ -1051,7 +1092,7 @@
                         },
                         {
                             label: 'SCFI',
-                            data: currentData.indices.SCFI.slice(-52),
+                            data: currentData.indices.SCFI.slice(sliceStart),
                             borderColor: '#e74c3c',
                             backgroundColor: 'rgba(231, 76, 60, 0.1)',
                             tension: 0.4,
@@ -1059,7 +1100,7 @@
                         },
                         {
                             label: 'CCFI',
-                            data: currentData.indices.CCFI.slice(-52),
+                            data: currentData.indices.CCFI.slice(sliceStart),
                             borderColor: '#f39c12',
                             backgroundColor: 'rgba(243, 156, 18, 0.1)',
                             tension: 0.4,
@@ -1067,7 +1108,7 @@
                         },
                         {
                             label: 'HRCI',
-                            data: currentData.indices.HRCI.slice(-52),
+                            data: currentData.indices.HRCI.slice(sliceStart),
                             borderColor: '#2ecc71',
                             backgroundColor: 'rgba(46, 204, 113, 0.1)',
                             tension: 0.4,
@@ -1102,19 +1143,29 @@
         }
 
         // 북미 해상 운임 차트
-        function createUSSeaChart() {
-            updateUSSeaChart();
+        function createUSSeaChart(timeRange = '1Y') {
+            updateUSSeaChart(timeRange);
         }
 
-        function updateUSSeaChart() {
+        function updateUSSeaChart(timeRange = '1Y') {
             const ctx = document.getElementById('usSeaChart').getContext('2d');
             const selectedOrigin = document.getElementById('usSeaOriginSelect').value;
             
             if (charts.usSea) charts.usSea.destroy();
             
+            // 시간 범위에 따른 데이터 포인트 결정
+            let dataPoints = 12;
+            switch(timeRange) {
+                case '3M': dataPoints = 3; break;
+                case '6M': dataPoints = 6; break;
+                case '1Y': dataPoints = 12; break;
+                case '2Y': dataPoints = 24; break;
+                case 'Max': dataPoints = currentData.dates.length; break;
+            }
+            
             const labels = currentData.dates.map(d => 
                 `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-            ).slice(-12);
+            ).slice(-dataPoints);
             
             const datasets = [];
             const origins = selectedOrigin === 'all' ? 
@@ -1137,13 +1188,13 @@
             origins.forEach(origin => {
                 datasets.push({
                     label: `${names[origin]} → LA`,
-                    data: currentData.freight[origin].sea.la.slice(-12),
+                    data: currentData.freight[origin].sea.la.slice(-dataPoints),
                     borderColor: colors[origin],
                     tension: 0.4
                 });
                 datasets.push({
                     label: `${names[origin]} → 롱비치`,
-                    data: currentData.freight[origin].sea.longbeach.slice(-12),
+                    data: currentData.freight[origin].sea.longbeach.slice(-dataPoints),
                     borderColor: colors[origin],
                     borderDash: [5, 5],
                     tension: 0.4
@@ -1163,19 +1214,29 @@
         }
 
         // 유럽 해상 운임 차트
-        function createEUSeaChart() {
-            updateEUSeaChart();
+        function createEUSeaChart(timeRange = '1Y') {
+            updateEUSeaChart(timeRange);
         }
 
-        function updateEUSeaChart() {
+        function updateEUSeaChart(timeRange = '1Y') {
             const ctx = document.getElementById('euSeaChart').getContext('2d');
             const selectedOrigin = document.getElementById('euSeaOriginSelect').value;
             
             if (charts.euSea) charts.euSea.destroy();
             
+            // 시간 범위에 따른 데이터 포인트 결정
+            let dataPoints = 12;
+            switch(timeRange) {
+                case '3M': dataPoints = 3; break;
+                case '6M': dataPoints = 6; break;
+                case '1Y': dataPoints = 12; break;
+                case '2Y': dataPoints = 24; break;
+                case 'Max': dataPoints = currentData.dates.length; break;
+            }
+            
             const labels = currentData.dates.map(d => 
                 `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-            ).slice(-12);
+            ).slice(-dataPoints);
             
             const datasets = [];
             const origins = selectedOrigin === 'all' ? 
@@ -1198,7 +1259,7 @@
             origins.forEach(origin => {
                 datasets.push({
                     label: `${names[origin]} → 로테르담`,
-                    data: currentData.freight[origin].sea.rotterdam.slice(-12),
+                    data: currentData.freight[origin].sea.rotterdam.slice(-dataPoints),
                     borderColor: colors[origin],
                     tension: 0.4
                 });
@@ -1217,19 +1278,29 @@
         }
 
         // 인도 해상 운임 차트
-        function createIndiaSeaChart() {
-            updateIndiaSeaChart();
+        function createIndiaSeaChart(timeRange = '1Y') {
+            updateIndiaSeaChart(timeRange);
         }
 
-        function updateIndiaSeaChart() {
+        function updateIndiaSeaChart(timeRange = '1Y') {
             const ctx = document.getElementById('indiaSeaChart').getContext('2d');
             const selectedOrigin = document.getElementById('indiaSeaOriginSelect').value;
             
             if (charts.indiaSea) charts.indiaSea.destroy();
             
+            // 시간 범위에 따른 데이터 포인트 결정
+            let dataPoints = 12;
+            switch(timeRange) {
+                case '3M': dataPoints = 3; break;
+                case '6M': dataPoints = 6; break;
+                case '1Y': dataPoints = 12; break;
+                case '2Y': dataPoints = 24; break;
+                case 'Max': dataPoints = currentData.dates.length; break;
+            }
+            
             const labels = currentData.dates.map(d => 
                 `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-            ).slice(-12);
+            ).slice(-dataPoints);
             
             const datasets = [];
             const origins = selectedOrigin === 'all' ? 
@@ -1252,20 +1323,20 @@
             origins.forEach(origin => {
                 datasets.push({
                     label: `${names[origin]} → Kandla`,
-                    data: currentData.freight[origin].sea.kandla.slice(-12),
+                    data: currentData.freight[origin].sea.kandla.slice(-dataPoints),
                     borderColor: colors[origin],
                     tension: 0.4
                 });
                 datasets.push({
                     label: `${names[origin]} → Paradip`,
-                    data: currentData.freight[origin].sea.paradip.slice(-12),
+                    data: currentData.freight[origin].sea.paradip.slice(-dataPoints),
                     borderColor: colors[origin],
                     borderDash: [5, 5],
                     tension: 0.4
                 });
                 datasets.push({
                     label: `${names[origin]} → JNPT`,
-                    data: currentData.freight[origin].sea.jnpt.slice(-12),
+                    data: currentData.freight[origin].sea.jnpt.slice(-dataPoints),
                     borderColor: colors[origin],
                     borderDash: [2, 2],
                     tension: 0.4
@@ -1285,19 +1356,29 @@
         }
 
         // 북미 항공 운임 차트
-        function createUSAirChart() {
-            updateUSAirChart();
+        function createUSAirChart(timeRange = '1Y') {
+            updateUSAirChart(timeRange);
         }
 
-        function updateUSAirChart() {
+        function updateUSAirChart(timeRange = '1Y') {
             const ctx = document.getElementById('usAirChart').getContext('2d');
             const selectedOrigin = document.getElementById('usAirOriginSelect').value;
             
             if (charts.usAir) charts.usAir.destroy();
             
+            // 시간 범위에 따른 데이터 포인트 결정
+            let dataPoints = 12;
+            switch(timeRange) {
+                case '3M': dataPoints = 3; break;
+                case '6M': dataPoints = 6; break;
+                case '1Y': dataPoints = 12; break;
+                case '2Y': dataPoints = 24; break;
+                case 'Max': dataPoints = currentData.dates.length; break;
+            }
+            
             const labels = currentData.dates.map(d => 
                 `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-            ).slice(-12);
+            ).slice(-dataPoints);
             
             const datasets = [];
             const origins = selectedOrigin === 'all' ? 
@@ -1320,13 +1401,13 @@
             origins.forEach(origin => {
                 datasets.push({
                     label: `${names[origin]} → LAX`,
-                    data: currentData.freight[origin].air.lax.slice(-12),
+                    data: currentData.freight[origin].air.lax.slice(-dataPoints),
                     borderColor: colors[origin],
                     tension: 0.4
                 });
                 datasets.push({
                     label: `${names[origin]} → JFK`,
-                    data: currentData.freight[origin].air.jfk.slice(-12),
+                    data: currentData.freight[origin].air.jfk.slice(-dataPoints),
                     borderColor: colors[origin],
                     borderDash: [5, 5],
                     tension: 0.4
@@ -1346,19 +1427,29 @@
         }
 
         // 인도 항공 운임 차트
-        function createIndiaAirChart() {
-            updateIndiaAirChart();
+        function createIndiaAirChart(timeRange = '1Y') {
+            updateIndiaAirChart(timeRange);
         }
 
-        function updateIndiaAirChart() {
+        function updateIndiaAirChart(timeRange = '1Y') {
             const ctx = document.getElementById('indiaAirChart').getContext('2d');
             const selectedOrigin = document.getElementById('indiaAirOriginSelect').value;
             
             if (charts.indiaAir) charts.indiaAir.destroy();
             
+            // 시간 범위에 따른 데이터 포인트 결정
+            let dataPoints = 12;
+            switch(timeRange) {
+                case '3M': dataPoints = 3; break;
+                case '6M': dataPoints = 6; break;
+                case '1Y': dataPoints = 12; break;
+                case '2Y': dataPoints = 24; break;
+                case 'Max': dataPoints = currentData.dates.length; break;
+            }
+            
             const labels = currentData.dates.map(d => 
                 `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-            ).slice(-12);
+            ).slice(-dataPoints);
             
             const datasets = [];
             const origins = selectedOrigin === 'all' ? 
@@ -1381,20 +1472,20 @@
             origins.forEach(origin => {
                 datasets.push({
                     label: `${names[origin]} → DEL`,
-                    data: currentData.freight[origin].air.del.slice(-12),
+                    data: currentData.freight[origin].air.del.slice(-dataPoints),
                     borderColor: colors[origin],
                     tension: 0.4
                 });
                 datasets.push({
                     label: `${names[origin]} → BOM`,
-                    data: currentData.freight[origin].air.bom.slice(-12),
+                    data: currentData.freight[origin].air.bom.slice(-dataPoints),
                     borderColor: colors[origin],
                     borderDash: [5, 5],
                     tension: 0.4
                 });
                 datasets.push({
                     label: `${names[origin]} → BLR`,
-                    data: currentData.freight[origin].air.blr.slice(-12),
+                    data: currentData.freight[origin].air.blr.slice(-dataPoints),
                     borderColor: colors[origin],
                     borderDash: [2, 2],
                     tension: 0.4
@@ -1414,20 +1505,45 @@
         }
 
         // 모든 차트 업데이트
-        function updateCharts() {
-            createIndexChart();
-            createUSSeaChart();
-            createEUSeaChart();
-            createIndiaSeaChart();
-            createUSAirChart();
-            createIndiaAirChart();
+        function updateCharts(timeRange = '1Y') {
+            createIndexChart(timeRange);
+            createUSSeaChart(timeRange);
+            createEUSeaChart(timeRange);
+            createIndiaSeaChart(timeRange);
+            createUSAirChart(timeRange);
+            createIndiaAirChart(timeRange);
         }
+        
+        // 전역 시간 범위 변수
+        let currentTimeRange = '1Y';
 
+        // 날짜 업데이트 함수
+        function updateRateDate() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = today.getMonth() + 1;
+            const day = today.getDate();
+            
+            const dateStr = `(${year}년 ${month}월 ${day}일 기준)`;
+            document.getElementById('rateDate').textContent = dateStr;
+            
+            // 유효기간도 함께 업데이트
+            const validUntil = new Date(today);
+            validUntil.setDate(validUntil.getDate() + 7);
+            
+            alert(`✅ 운임 기준일이 업데이트되었습니다.
+            
+기준일: ${year}년 ${month}월 ${day}일
+유효기간: ${year}.${String(month).padStart(2, '0')}.${String(day).padStart(2, '0')} ~ ${validUntil.getFullYear()}.${String(validUntil.getMonth() + 1).padStart(2, '0')}.${String(validUntil.getDate()).padStart(2, '0')}
+            
+※ 운임은 주간 단위로 변동될 수 있습니다.`);
+        }
+        
         // 페이지 로드 시 초기화
         window.onload = function() {
             generateRealisticData();
             setupFileUpload();
-            updateCharts();
+            updateCharts('1Y'); // 기본값 1년
             
             // 다운로드 버튼 이벤트 리스너 추가
             document.getElementById('downloadBtn').addEventListener('click', downloadCurrentData);
@@ -1437,8 +1553,10 @@
                 btn.addEventListener('click', function() {
                     document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
                     this.classList.add('active');
-                    // 시간 범위에 따른 차트 업데이트 (추후 구현)
-                    console.log('시간 범위 변경:', this.getAttribute('data-range'));
+                    const range = this.getAttribute('data-range');
+                    currentTimeRange = range; // 전역 변수 업데이트
+                    updateCharts(range); // 선택된 범위로 차트 업데이트
+                    console.log('시간 범위 변경:', range);
                 });
             });
         };
