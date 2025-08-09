@@ -446,10 +446,10 @@
             </div>
         </div>
 
-        <div class="demo-notice">
+        <div class="demo-notice" id="dataStatus">
             📊 해운 지수 및 운임 데이터 
-            <span style="background: #e74c3c; color: white; padding: 2px 8px; border-radius: 5px; font-weight: 600;">2025년 1월 21일 기준</span>
-            <br>• BDI: 1,140 | SCFI: 984.73 | CCFI: 962.64 | HRCI: 635.6
+            <span style="background: #e74c3c; color: white; padding: 2px 8px; border-radius: 5px; font-weight: 600;" id="statusDate">2025년 1월 21일 기준</span>
+            <br><span id="statusIndices">• BDI: 1,140 | SCFI: 984.73 | CCFI: 962.64 | HRCI: 635.6</span>
             <br>• 출발지: 상해, 홍콩, 심천, 하노이, 호치민
             <br>• 도착지: 북미(LA, 롱비치), 유럽(로테르담), 인도(Kandla, Paradip, JNPT)
             <br><span style="color: #e74c3c; font-weight: 600;">⚠️ 운임은 주간 단위로 변동되며, 성수기/유가/시장 상황에 따라 ±10~30% 변동 가능</span>
@@ -472,6 +472,8 @@
                     <div>
                         <div style="margin-bottom: 10px; font-weight: 600;">시간 범위 선택</div>
                         <div class="time-range-buttons">
+                            <button class="time-btn" data-range="2W">2주</button>
+                            <button class="time-btn" data-range="1M">1개월</button>
                             <button class="time-btn" data-range="3M">3개월</button>
                             <button class="time-btn" data-range="6M">6개월</button>
                             <button class="time-btn active" data-range="1Y">1년</button>
@@ -509,7 +511,11 @@
         <div class="freight-table">
             <h3 class="chart-title">📊 운임 현황 <span id="rateDate" style="color: #e74c3c; font-size: 0.9em;">(2025년 1월 21일 기준)</span></h3>
             <div class="date-update-section">
-                <button id="updateDateBtn" class="update-date-btn">🔄 날짜 업데이트</button>
+                <label style="margin-right: 10px;">날짜 선택: </label>
+                <select id="dateSelector" style="padding: 5px 10px; border: 2px solid #3498db; border-radius: 5px; margin-right: 10px;">
+                    <!-- 날짜 옵션이 동적으로 추가됨 -->
+                </select>
+                <button id="updateDateBtn" class="update-date-btn">🔄 오늘 날짜로 업데이트</button>
             </div>
             
             <div class="tabs">
@@ -862,10 +868,160 @@
             // 최신 데이터로 메트릭스 업데이트
             if (currentData.dates.length > 0) {
                 const lastIdx = currentData.dates.length - 1;
-                document.querySelector('.metric-card:nth-child(1) .metric-value').textContent = currentData.indices.BDI[lastIdx] || '1,140';
-                document.querySelector('.metric-card:nth-child(2) .metric-value').textContent = currentData.indices.SCFI[lastIdx] || '984.73';
-                document.querySelector('.metric-card:nth-child(3) .metric-value').textContent = currentData.indices.CCFI[lastIdx] || '962.64';
-                document.querySelector('.metric-card:nth-child(4) .metric-value').textContent = currentData.indices.HRCI[lastIdx] || '635.6';
+                updateMetricsForTimeRange(currentTimeRange);
+                updateFreightTables(lastIdx);
+                
+                // 날짜 선택기를 최신 날짜로 설정
+                const dateSelector = document.getElementById('dateSelector');
+                if (dateSelector) {
+                    dateSelector.value = lastIdx;
+                }
+            }
+        }
+        
+        // 날짜 선택기 업데이트
+        function updateDateSelector() {
+            const dateSelector = document.getElementById('dateSelector');
+            if (!dateSelector) return;
+            
+            dateSelector.innerHTML = '';
+            
+            if (currentData.dates.length > 0) {
+                // 날짜를 역순으로 추가 (최신 날짜가 먼저)
+                for (let i = currentData.dates.length - 1; i >= 0; i--) {
+                    const date = currentData.dates[i];
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.textContent = `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
+                    dateSelector.appendChild(option);
+                }
+                
+                // 날짜 선택 이벤트 리스너
+                dateSelector.addEventListener('change', function() {
+                    const selectedIdx = parseInt(this.value);
+                    updateFreightTables(selectedIdx);
+                    
+                    // 선택된 날짜로 제목 업데이트
+                    const selectedDate = currentData.dates[selectedIdx];
+                    const rateDate = document.getElementById('rateDate');
+                    rateDate.textContent = `(${selectedDate.getFullYear()}년 ${selectedDate.getMonth() + 1}월 ${selectedDate.getDate()}일 기준)`;
+                });
+            }
+        }
+        
+        // 시간 범위에 따른 메트릭스 업데이트
+        function updateMetricsForTimeRange(timeRange) {
+            if (currentData.dates.length === 0) return;
+            
+            // 시간 범위에 따른 데이터 포인트 결정
+            let startIdx = 0;
+            const endIdx = currentData.dates.length - 1;
+            
+            // 주간 데이터 기준으로 인덱스 계산
+            switch(timeRange) {
+                case '2W':
+                    // 2주
+                    startIdx = Math.max(0, endIdx - 2);
+                    break;
+                case '1M':
+                    // 1개월 = 약 4주
+                    startIdx = Math.max(0, endIdx - 4);
+                    break;
+                case '3M':
+                    // 3개월 = 약 13주
+                    startIdx = Math.max(0, endIdx - 13);
+                    break;
+                case '6M':
+                    // 6개월 = 약 26주
+                    startIdx = Math.max(0, endIdx - 26);
+                    break;
+                case '1Y':
+                    // 1년 = 약 52주
+                    startIdx = Math.max(0, endIdx - 52);
+                    break;
+                case '2Y':
+                    // 2년 = 약 104주
+                    startIdx = Math.max(0, endIdx - 104);
+                    break;
+                case 'Max':
+                    startIdx = 0;
+                    break;
+            }
+            
+            console.log(`시간 범위: ${timeRange}, 시작 인덱스: ${startIdx}, 종료 인덱스: ${endIdx}`);
+            console.log(`전체 데이터 포인트: ${currentData.dates.length}개`);
+            
+            // 시작과 끝 값으로 변동률 계산
+            const bdiStart = currentData.indices.BDI[startIdx];
+            const bdiEnd = currentData.indices.BDI[endIdx];
+            const bdiChange = bdiStart ? ((bdiEnd - bdiStart) / bdiStart * 100).toFixed(1) : 0;
+            
+            const scfiStart = currentData.indices.SCFI[startIdx];
+            const scfiEnd = currentData.indices.SCFI[endIdx];
+            const scfiChange = scfiStart ? ((scfiEnd - scfiStart) / scfiStart * 100).toFixed(1) : 0;
+            
+            const ccfiStart = currentData.indices.CCFI[startIdx];
+            const ccfiEnd = currentData.indices.CCFI[endIdx];
+            const ccfiChange = ccfiStart ? ((ccfiEnd - ccfiStart) / ccfiStart * 100).toFixed(1) : 0;
+            
+            const hrciStart = currentData.indices.HRCI[startIdx];
+            const hrciEnd = currentData.indices.HRCI[endIdx];
+            const hrciChange = hrciStart ? ((hrciEnd - hrciStart) / hrciStart * 100).toFixed(1) : 0;
+            
+            console.log(`BDI: ${bdiStart} → ${bdiEnd} (${bdiChange}%)`);
+            console.log(`SCFI: ${scfiStart} → ${scfiEnd} (${scfiChange}%)`);
+            
+            // 메트릭스 카드 업데이트
+            document.querySelector('.metric-card:nth-child(1) .metric-value').textContent = bdiEnd ? bdiEnd.toLocaleString() : '0';
+            const bdiChangeEl = document.querySelector('.metric-card:nth-child(1) .metric-change');
+            bdiChangeEl.textContent = `${parseFloat(bdiChange) > 0 ? '▲' : '▼'} ${Math.abs(parseFloat(bdiChange))}%`;
+            bdiChangeEl.className = `metric-change ${parseFloat(bdiChange) > 0 ? 'positive' : 'negative'}`;
+            
+            document.querySelector('.metric-card:nth-child(2) .metric-value').textContent = scfiEnd ? scfiEnd.toFixed(2) : '0.00';
+            const scfiChangeEl = document.querySelector('.metric-card:nth-child(2) .metric-change');
+            scfiChangeEl.textContent = `${parseFloat(scfiChange) > 0 ? '▲' : '▼'} ${Math.abs(parseFloat(scfiChange))}%`;
+            scfiChangeEl.className = `metric-change ${parseFloat(scfiChange) > 0 ? 'positive' : 'negative'}`;
+            
+            document.querySelector('.metric-card:nth-child(3) .metric-value').textContent = ccfiEnd ? ccfiEnd.toFixed(2) : '0.00';
+            const ccfiChangeEl = document.querySelector('.metric-card:nth-child(3) .metric-change');
+            ccfiChangeEl.textContent = `${parseFloat(ccfiChange) > 0 ? '▲' : '▼'} ${Math.abs(parseFloat(ccfiChange))}%`;
+            ccfiChangeEl.className = `metric-change ${parseFloat(ccfiChange) > 0 ? 'positive' : 'negative'}`;
+            
+            document.querySelector('.metric-card:nth-child(4) .metric-value').textContent = hrciEnd ? hrciEnd.toFixed(1) : '0.0';
+            const hrciChangeEl = document.querySelector('.metric-card:nth-child(4) .metric-change');
+            hrciChangeEl.textContent = `${parseFloat(hrciChange) > 0 ? '▲' : '▼'} ${Math.abs(parseFloat(hrciChange))}%`;
+            hrciChangeEl.className = `metric-change ${parseFloat(hrciChange) > 0 ? 'positive' : 'negative'}`;
+            
+            // 상단 데이터 상태 업데이트
+            updateDataStatus(endIdx);
+            
+            // 시작 날짜와 종료 날짜 정보 표시 (디버깅용)
+            if (currentData.dates[startIdx] && currentData.dates[endIdx]) {
+                const startDate = currentData.dates[startIdx];
+                const endDate = currentData.dates[endIdx];
+                console.log(`기간: ${startDate.toLocaleDateString()} ~ ${endDate.toLocaleDateString()}`);
+            }
+        }
+        
+        // 데이터 상태 업데이트
+        function updateDataStatus(idx) {
+            if (currentData.dates.length === 0) return;
+            
+            const date = currentData.dates[idx];
+            const statusDate = document.getElementById('statusDate');
+            const statusIndices = document.getElementById('statusIndices');
+            
+            if (statusDate) {
+                statusDate.textContent = `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일 기준`;
+            }
+            
+            if (statusIndices) {
+                const bdi = currentData.indices.BDI[idx];
+                const scfi = currentData.indices.SCFI[idx];
+                const ccfi = currentData.indices.CCFI[idx];
+                const hrci = currentData.indices.HRCI[idx];
+                
+                statusIndices.textContent = `• BDI: ${bdi.toLocaleString()} | SCFI: ${scfi.toFixed(2)} | CCFI: ${ccfi.toFixed(2)} | HRCI: ${hrci.toFixed(1)}`;
             }
         }
 
@@ -898,42 +1054,103 @@
                 }
             };
 
-            // 실제 지수 기준값
+            // 실제 지수 기준값 - 시간별로 다른 변동률 적용
             const currentIndices = { BDI: 1140, SCFI: 984.73, CCFI: 962.64, HRCI: 635.6 };
-            const yearAgoIndices = { BDI: 1980, SCFI: 1204, CCFI: 1142, HRCI: 693 };
+            
+            // 2주 및 1개월 데이터 추가 생성
+            const indices2WeeksAgo = { BDI: 1165, SCFI: 1005, CCFI: 978, HRCI: 645 };
+            const indices1MonthAgo = { BDI: 1185, SCFI: 1020, CCFI: 990, HRCI: 655 };
+            const indices3MonthsAgo = { BDI: 1250, SCFI: 1050, CCFI: 1020, HRCI: 680 };
+            const indices6MonthsAgo = { BDI: 1480, SCFI: 1150, CCFI: 1100, HRCI: 720 };
+            const indicesYearAgo = { BDI: 1980, SCFI: 1204, CCFI: 1142, HRCI: 693 };
 
             let week = 0;
+            const totalWeeks = 55; // 약 13개월
+            
             for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 7)) {
                 currentData.dates.push(new Date(d));
                 
-                const progress = week / 55;
-                const volatility = 0.03;
+                const progress = week / totalWeeks;
                 
-                // 지수 데이터
-                currentData.indices.BDI.push(Math.round(yearAgoIndices.BDI + (currentIndices.BDI - yearAgoIndices.BDI) * progress * (1 + (Math.random() - 0.5) * volatility)));
-                currentData.indices.SCFI.push(Math.round((yearAgoIndices.SCFI + (currentIndices.SCFI - yearAgoIndices.SCFI) * progress * (1 + (Math.random() - 0.5) * volatility)) * 100) / 100);
-                currentData.indices.CCFI.push(Math.round((yearAgoIndices.CCFI + (currentIndices.CCFI - yearAgoIndices.CCFI) * progress * (1 + (Math.random() - 0.5) * volatility)) * 100) / 100);
-                currentData.indices.HRCI.push(Math.round((yearAgoIndices.HRCI + (currentIndices.HRCI - yearAgoIndices.HRCI) * progress * (1 + (Math.random() - 0.5) * volatility)) * 10) / 10);
+                // 비선형적인 변동 패턴 생성
+                let bdiValue, scfiValue, ccfiValue, hrciValue;
+                
+                if (week < 3) { // 2년 전
+                    bdiValue = 2200 + Math.random() * 100;
+                    scfiValue = 1350 + Math.random() * 50;
+                    ccfiValue = 1250 + Math.random() * 40;
+                    hrciValue = 750 + Math.random() * 20;
+                } else if (week < 29) { // 1년 전까지
+                    const localProgress = (week - 3) / 26;
+                    bdiValue = 2200 - (2200 - indicesYearAgo.BDI) * localProgress + (Math.random() - 0.5) * 100;
+                    scfiValue = 1350 - (1350 - indicesYearAgo.SCFI) * localProgress + (Math.random() - 0.5) * 50;
+                    ccfiValue = 1250 - (1250 - indicesYearAgo.CCFI) * localProgress + (Math.random() - 0.5) * 40;
+                    hrciValue = 750 - (750 - indicesYearAgo.HRCI) * localProgress + (Math.random() - 0.5) * 20;
+                } else if (week < 42) { // 6개월 전까지
+                    const localProgress = (week - 29) / 13;
+                    bdiValue = indicesYearAgo.BDI - (indicesYearAgo.BDI - indices6MonthsAgo.BDI) * localProgress + (Math.random() - 0.5) * 80;
+                    scfiValue = indicesYearAgo.SCFI - (indicesYearAgo.SCFI - indices6MonthsAgo.SCFI) * localProgress + (Math.random() - 0.5) * 40;
+                    ccfiValue = indicesYearAgo.CCFI - (indicesYearAgo.CCFI - indices6MonthsAgo.CCFI) * localProgress + (Math.random() - 0.5) * 30;
+                    hrciValue = indicesYearAgo.HRCI - (indicesYearAgo.HRCI - indices6MonthsAgo.HRCI) * localProgress + (Math.random() - 0.5) * 15;
+                } else if (week < 49) { // 3개월 전까지
+                    const localProgress = (week - 42) / 7;
+                    bdiValue = indices6MonthsAgo.BDI - (indices6MonthsAgo.BDI - indices3MonthsAgo.BDI) * localProgress + (Math.random() - 0.5) * 60;
+                    scfiValue = indices6MonthsAgo.SCFI - (indices6MonthsAgo.SCFI - indices3MonthsAgo.SCFI) * localProgress + (Math.random() - 0.5) * 30;
+                    ccfiValue = indices6MonthsAgo.CCFI - (indices6MonthsAgo.CCFI - indices3MonthsAgo.CCFI) * localProgress + (Math.random() - 0.5) * 25;
+                    hrciValue = indices6MonthsAgo.HRCI - (indices6MonthsAgo.HRCI - indices3MonthsAgo.HRCI) * localProgress + (Math.random() - 0.5) * 10;
+                } else if (week < 51) { // 1개월 전까지
+                    const localProgress = (week - 49) / 2;
+                    bdiValue = indices3MonthsAgo.BDI - (indices3MonthsAgo.BDI - indices1MonthAgo.BDI) * localProgress + (Math.random() - 0.5) * 30;
+                    scfiValue = indices3MonthsAgo.SCFI - (indices3MonthsAgo.SCFI - indices1MonthAgo.SCFI) * localProgress + (Math.random() - 0.5) * 15;
+                    ccfiValue = indices3MonthsAgo.CCFI - (indices3MonthsAgo.CCFI - indices1MonthAgo.CCFI) * localProgress + (Math.random() - 0.5) * 12;
+                    hrciValue = indices3MonthsAgo.HRCI - (indices3MonthsAgo.HRCI - indices1MonthAgo.HRCI) * localProgress + (Math.random() - 0.5) * 6;
+                } else if (week < 53) { // 2주 전까지
+                    const localProgress = (week - 51) / 2;
+                    bdiValue = indices1MonthAgo.BDI - (indices1MonthAgo.BDI - indices2WeeksAgo.BDI) * localProgress + (Math.random() - 0.5) * 20;
+                    scfiValue = indices1MonthAgo.SCFI - (indices1MonthAgo.SCFI - indices2WeeksAgo.SCFI) * localProgress + (Math.random() - 0.5) * 10;
+                    ccfiValue = indices1MonthAgo.CCFI - (indices1MonthAgo.CCFI - indices2WeeksAgo.CCFI) * localProgress + (Math.random() - 0.5) * 8;
+                    hrciValue = indices1MonthAgo.HRCI - (indices1MonthAgo.HRCI - indices2WeeksAgo.HRCI) * localProgress + (Math.random() - 0.5) * 4;
+                } else { // 현재까지
+                    const localProgress = (week - 53) / 2;
+                    bdiValue = indices2WeeksAgo.BDI - (indices2WeeksAgo.BDI - currentIndices.BDI) * localProgress + (Math.random() - 0.5) * 15;
+                    scfiValue = indices2WeeksAgo.SCFI - (indices2WeeksAgo.SCFI - currentIndices.SCFI) * localProgress + (Math.random() - 0.5) * 8;
+                    ccfiValue = indices2WeeksAgo.CCFI - (indices2WeeksAgo.CCFI - currentIndices.CCFI) * localProgress + (Math.random() - 0.5) * 6;
+                    hrciValue = indices2WeeksAgo.HRCI - (indices2WeeksAgo.HRCI - currentIndices.HRCI) * localProgress + (Math.random() - 0.5) * 3;
+                }
+                
+                // 지수 데이터 저장
+                currentData.indices.BDI.push(Math.round(bdiValue));
+                currentData.indices.SCFI.push(Math.round(scfiValue * 100) / 100);
+                currentData.indices.CCFI.push(Math.round(ccfiValue * 100) / 100);
+                currentData.indices.HRCI.push(Math.round(hrciValue * 10) / 10);
                 
                 // 각 출발지별 운임 데이터 생성
                 ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'].forEach(origin => {
-                    // 해상 운임
+                    // 해상 운임 - 지수와 연동된 변동
                     Object.keys(baseRates[origin].sea).forEach(dest => {
                         const baseRate = baseRates[origin].sea[dest];
-                        const rate = Math.round(baseRate * (1 + (Math.random() - 0.5) * 0.1));
+                        const indexFactor = scfiValue / currentIndices.SCFI; // SCFI 연동
+                        const rate = Math.round(baseRate * indexFactor * (1 + (Math.random() - 0.5) * 0.05));
                         currentData.freight[origin].sea[dest].push(rate);
                     });
                     
-                    // 항공 운임
+                    // 항공 운임 - 더 안정적인 변동
                     Object.keys(baseRates[origin].air).forEach(dest => {
                         const baseRate = baseRates[origin].air[dest];
-                        const rate = Math.round(baseRate * (1 + (Math.random() - 0.5) * 0.1) * 100) / 100;
+                        const indexFactor = 0.9 + 0.2 * (scfiValue / currentIndices.SCFI); // 부분 연동
+                        const rate = Math.round(baseRate * indexFactor * (1 + (Math.random() - 0.5) * 0.03) * 100) / 100;
                         currentData.freight[origin].air[dest].push(rate);
                     });
                 });
                 
                 week++;
             }
+            
+            console.log('데이터 생성 완료:', currentData.dates.length, '개 주간 데이터');
+            console.log('마지막 지수 값:', {
+                BDI: currentData.indices.BDI[currentData.indices.BDI.length - 1],
+                SCFI: currentData.indices.SCFI[currentData.indices.SCFI.length - 1]
+            });
         }
 
         // CSV 다운로드 함수
@@ -1147,6 +1364,18 @@
                     
                     // 운임 테이블 업데이트
                     updateFreightTables(lastIdx);
+                    
+                    // 날짜 선택기 업데이트
+                    updateDateSelector();
+                    
+                    // 상단 데이터 상태 업데이트
+                    updateDataStatus(lastIdx);
+                    
+                    // 날짜 선택기 업데이트
+                    updateDateSelector();
+                    
+                    // 상단 데이터 상태 업데이트
+                    updateDataStatus(lastIdx);
                 }
                 
                 // 차트 업데이트
@@ -1220,8 +1449,18 @@
             let startDate = new Date();
             
             switch(timeRange) {
+                case '2W':
+                    dataPoints = 2;
+                    startDate.setDate(endDate.getDate() - 14);
+                    periodText = `(최근 2주)`;
+                    break;
+                case '1M':
+                    dataPoints = 4;
+                    startDate.setMonth(endDate.getMonth() - 1);
+                    periodText = `(최근 1개월)`;
+                    break;
                 case '3M':
-                    dataPoints = 12;
+                    dataPoints = 13;
                     startDate.setMonth(endDate.getMonth() - 3);
                     periodText = `(${startDate.getFullYear()}.${String(startDate.getMonth() + 1).padStart(2, '0')} - ${endDate.getFullYear()}.${String(endDate.getMonth() + 1).padStart(2, '0')})`;
                     break;
@@ -1338,10 +1577,12 @@
             // 시간 범위에 따른 데이터 포인트 결정
             let dataPoints = 12;
             switch(timeRange) {
-                case '3M': dataPoints = 3; break;
-                case '6M': dataPoints = 6; break;
-                case '1Y': dataPoints = 12; break;
-                case '2Y': dataPoints = 24; break;
+                case '2W': dataPoints = 2; break;
+                case '1M': dataPoints = 4; break;
+                case '3M': dataPoints = 13; break;
+                case '6M': dataPoints = 26; break;
+                case '1Y': dataPoints = 52; break;
+                case '2Y': dataPoints = 104; break;
                 case 'Max': dataPoints = currentData.dates.length; break;
             }
             
@@ -1409,10 +1650,12 @@
             // 시간 범위에 따른 데이터 포인트 결정
             let dataPoints = 12;
             switch(timeRange) {
-                case '3M': dataPoints = 3; break;
-                case '6M': dataPoints = 6; break;
-                case '1Y': dataPoints = 12; break;
-                case '2Y': dataPoints = 24; break;
+                case '2W': dataPoints = 2; break;
+                case '1M': dataPoints = 4; break;
+                case '3M': dataPoints = 13; break;
+                case '6M': dataPoints = 26; break;
+                case '1Y': dataPoints = 52; break;
+                case '2Y': dataPoints = 104; break;
                 case 'Max': dataPoints = currentData.dates.length; break;
             }
             
@@ -1709,29 +1952,37 @@
             analysisDiv.style.display = 'block';
             
             // 시간 범위에 따른 데이터 포인트 결정
-            let dataPoints = 12;
+            let dataPoints = 13;
             let periodText = '';
             const endDate = new Date();
             let startDate = new Date();
             
             switch(timeRange) {
+                case '2W':
+                    dataPoints = 2;
+                    periodText = '최근 2주';
+                    break;
+                case '1M':
+                    dataPoints = 4;
+                    periodText = '최근 1개월';
+                    break;
                 case '3M':
-                    dataPoints = 3;
+                    dataPoints = 13;
                     startDate.setMonth(endDate.getMonth() - 3);
                     periodText = `${startDate.getFullYear()}년 ${startDate.getMonth() + 1}월 ~ ${endDate.getFullYear()}년 ${endDate.getMonth() + 1}월`;
                     break;
                 case '6M':
-                    dataPoints = 6;
+                    dataPoints = 26;
                     startDate.setMonth(endDate.getMonth() - 6);
                     periodText = `${startDate.getFullYear()}년 ${startDate.getMonth() + 1}월 ~ ${endDate.getFullYear()}년 ${endDate.getMonth() + 1}월`;
                     break;
                 case '1Y':
-                    dataPoints = 12;
+                    dataPoints = 52;
                     startDate.setFullYear(endDate.getFullYear() - 1);
                     periodText = `${startDate.getFullYear()}년 ${startDate.getMonth() + 1}월 ~ ${endDate.getFullYear()}년 ${endDate.getMonth() + 1}월`;
                     break;
                 case '2Y':
-                    dataPoints = 24;
+                    dataPoints = 104;
                     startDate.setFullYear(endDate.getFullYear() - 2);
                     periodText = `${startDate.getFullYear()}년 ~ ${endDate.getFullYear()}년`;
                     break;
@@ -1975,14 +2226,28 @@
                     this.classList.add('active');
                     const range = this.getAttribute('data-range');
                     currentTimeRange = range; // 전역 변수 업데이트
-                    updateCharts(range); // 선택된 범위로 차트 업데이트
-                    analyzeFreightChanges(range); // 운임 변동 분석 추가
+                    
+                    // 메트릭스 업데이트
+                    updateMetricsForTimeRange(range);
+                    
+                    // 차트 업데이트
+                    updateCharts(range);
+                    
+                    // 운임 변동 분석 업데이트
+                    analyzeFreightChanges(range);
+                    
                     console.log('시간 범위 변경:', range);
                 });
             });
             
+            // 날짜 선택기 초기화
+            updateDateSelector();
+            
             // 초기 분석 실행
             analyzeFreightChanges('1Y');
+            
+            // 초기 메트릭스 업데이트
+            updateMetricsForTimeRange('1Y');
         };
     </script>
 </body>
