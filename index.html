@@ -724,6 +724,82 @@
                 </div>
             </div>
         </div>
+
+        <div class="charts-grid">
+            <div class="chart-container">
+                <h3 class="chart-title">🚢 유럽 해상 운임 비교</h3>
+                <div class="origin-selector">
+                    <label>출발지: </label>
+                    <select id="euSeaOriginSelect">
+                        <option value="all">전체</option>
+                        <option value="shanghai">상해</option>
+                        <option value="hongkong">홍콩</option>
+                        <option value="shenzhen">심천</option>
+                        <option value="hanoi">하노이</option>
+                        <option value="hochiminh">호치민</option>
+                    </select>
+                </div>
+                <div class="chart-canvas">
+                    <canvas id="euSeaChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <h3 class="chart-title">🚢 인도 해상 운임 비교</h3>
+                <div class="origin-selector">
+                    <label>출발지: </label>
+                    <select id="indiaSeaOriginSelect">
+                        <option value="all">전체</option>
+                        <option value="shanghai">상해</option>
+                        <option value="hongkong">홍콩</option>
+                        <option value="shenzhen">심천</option>
+                        <option value="hanoi">하노이</option>
+                        <option value="hochiminh">호치민</option>
+                    </select>
+                </div>
+                <div class="chart-canvas">
+                    <canvas id="indiaSeaChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-container">
+                <h3 class="chart-title">✈️ 북미 항공 운임 비교</h3>
+                <div class="origin-selector">
+                    <label>출발지: </label>
+                    <select id="usAirOriginSelect">
+                        <option value="all">전체</option>
+                        <option value="shanghai">상해</option>
+                        <option value="hongkong">홍콩</option>
+                        <option value="shenzhen">심천</option>
+                        <option value="hanoi">하노이</option>
+                        <option value="hochiminh">호치민</option>
+                    </select>
+                </div>
+                <div class="chart-canvas">
+                    <canvas id="usAirChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <h3 class="chart-title">✈️ 인도 항공 운임 비교</h3>
+                <div class="origin-selector">
+                    <label>출발지: </label>
+                    <select id="indiaAirOriginSelect">
+                        <option value="all">전체</option>
+                        <option value="shanghai">상해</option>
+                        <option value="hongkong">홍콩</option>
+                        <option value="shenzhen">심천</option>
+                        <option value="hanoi">하노이</option>
+                        <option value="hochiminh">호치민</option>
+                    </select>
+                </div>
+                <div class="chart-canvas">
+                    <canvas id="indiaAirChart"></canvas>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- 모든 JavaScript를 인라인으로 포함 -->
@@ -1002,7 +1078,21 @@
         // ===== 차트 업데이트 =====
         function updateCharts() {
             // 해운 지수 차트
-            const ctx1 = document.getElementById('indexChart').getContext('2d');
+            createIndexChart();
+            // 북미 해상 운임 차트
+            updateUSSeaChart();
+            // 유럽 해상 운임 차트
+            updateEUSeaChart();
+            // 인도 해상 운임 차트
+            updateIndiaSeaChart();
+            // 북미 항공 운임 차트
+            updateUSAirChart();
+            // 인도 항공 운임 차트
+            updateIndiaAirChart();
+        }
+
+        function createIndexChart() {
+            const ctx = document.getElementById('indexChart').getContext('2d');
             
             if (charts.index) charts.index.destroy();
             
@@ -1022,7 +1112,7 @@
                 `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
             );
             
-            charts.index = new Chart(ctx1, {
+            charts.index = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
@@ -1032,14 +1122,32 @@
                             data: currentData.indices.BDI.slice(sliceStart),
                             borderColor: '#3498db',
                             backgroundColor: 'rgba(52, 152, 219, 0.1)',
-                            tension: 0.4
+                            tension: 0.4,
+                            yAxisID: 'y'
                         },
                         {
                             label: 'SCFI',
                             data: currentData.indices.SCFI.slice(sliceStart),
                             borderColor: '#e74c3c',
                             backgroundColor: 'rgba(231, 76, 60, 0.1)',
-                            tension: 0.4
+                            tension: 0.4,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'CCFI',
+                            data: currentData.indices.CCFI.slice(sliceStart),
+                            borderColor: '#f39c12',
+                            backgroundColor: 'rgba(243, 156, 18, 0.1)',
+                            tension: 0.4,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'HRCI',
+                            data: currentData.indices.HRCI.slice(sliceStart),
+                            borderColor: '#2ecc71',
+                            backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                            tension: 0.4,
+                            yAxisID: 'y1'
                         }
                     ]
                 },
@@ -1048,12 +1156,24 @@
                     maintainAspectRatio: false,
                     plugins: {
                         legend: { position: 'top' }
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: { display: true, text: 'BDI / SCFI / CCFI' }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: { display: true, text: 'HRCI' },
+                            grid: { drawOnChartArea: false }
+                        }
                     }
                 }
             });
-            
-            // 북미 해상 운임 차트
-            updateUSSeaChart();
         }
 
         function updateUSSeaChart() {
@@ -1103,6 +1223,13 @@
                     borderColor: colors[origin],
                     tension: 0.4
                 });
+                datasets.push({
+                    label: `${names[origin]} → 롱비치`,
+                    data: currentData.freight[origin].sea.longbeach.slice(sliceStart),
+                    borderColor: colors[origin],
+                    borderDash: [5, 5],
+                    tension: 0.4
+                });
             });
             
             charts.usSea = new Chart(ctx, {
@@ -1113,6 +1240,271 @@
                     maintainAspectRatio: false,
                     plugins: { legend: { position: 'top' } },
                     scales: { y: { title: { display: true, text: 'USD/TEU' } } }
+                }
+            });
+        }
+
+        function updateEUSeaChart() {
+            const ctx = document.getElementById('euSeaChart').getContext('2d');
+            const selectedOrigin = document.getElementById('euSeaOriginSelect').value;
+            
+            if (charts.euSea) charts.euSea.destroy();
+            
+            let dataPoints = 52;
+            switch(currentTimeRange) {
+                case '2W': dataPoints = 2; break;
+                case '1M': dataPoints = 4; break;
+                case '3M': dataPoints = 13; break;
+                case '6M': dataPoints = 26; break;
+                case '1Y': dataPoints = 52; break;
+                case '2Y': dataPoints = 104; break;
+                case 'Max': dataPoints = currentData.dates.length; break;
+            }
+            
+            const sliceStart = Math.max(0, currentData.dates.length - dataPoints);
+            const labels = currentData.dates.slice(sliceStart).map(d => 
+                `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+            );
+            
+            const datasets = [];
+            const origins = selectedOrigin === 'all' ? 
+                ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'] : [selectedOrigin];
+            const colors = {
+                shanghai: '#3498db',
+                hongkong: '#e74c3c',
+                shenzhen: '#9b59b6',
+                hanoi: '#f39c12',
+                hochiminh: '#2ecc71'
+            };
+            const names = {
+                shanghai: '상해',
+                hongkong: '홍콩',
+                shenzhen: '심천',
+                hanoi: '하노이',
+                hochiminh: '호치민'
+            };
+            
+            origins.forEach(origin => {
+                datasets.push({
+                    label: `${names[origin]} → 로테르담`,
+                    data: currentData.freight[origin].sea.rotterdam.slice(sliceStart),
+                    borderColor: colors[origin],
+                    tension: 0.4
+                });
+            });
+            
+            charts.euSea = new Chart(ctx, {
+                type: 'line',
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top' } },
+                    scales: { y: { title: { display: true, text: 'USD/TEU' } } }
+                }
+            });
+        }
+
+        function updateIndiaSeaChart() {
+            const ctx = document.getElementById('indiaSeaChart').getContext('2d');
+            const selectedOrigin = document.getElementById('indiaSeaOriginSelect').value;
+            
+            if (charts.indiaSea) charts.indiaSea.destroy();
+            
+            let dataPoints = 52;
+            switch(currentTimeRange) {
+                case '2W': dataPoints = 2; break;
+                case '1M': dataPoints = 4; break;
+                case '3M': dataPoints = 13; break;
+                case '6M': dataPoints = 26; break;
+                case '1Y': dataPoints = 52; break;
+                case '2Y': dataPoints = 104; break;
+                case 'Max': dataPoints = currentData.dates.length; break;
+            }
+            
+            const sliceStart = Math.max(0, currentData.dates.length - dataPoints);
+            const labels = currentData.dates.slice(sliceStart).map(d => 
+                `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+            );
+            
+            const datasets = [];
+            const origins = selectedOrigin === 'all' ? 
+                ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'] : [selectedOrigin];
+            const colors = {
+                shanghai: '#3498db',
+                hongkong: '#e74c3c',
+                shenzhen: '#9b59b6',
+                hanoi: '#f39c12',
+                hochiminh: '#2ecc71'
+            };
+            const names = {
+                shanghai: '상해',
+                hongkong: '홍콩',
+                shenzhen: '심천',
+                hanoi: '하노이',
+                hochiminh: '호치민'
+            };
+            
+            origins.forEach(origin => {
+                datasets.push({
+                    label: `${names[origin]} → Kandla`,
+                    data: currentData.freight[origin].sea.kandla.slice(sliceStart),
+                    borderColor: colors[origin],
+                    tension: 0.4
+                });
+                datasets.push({
+                    label: `${names[origin]} → JNPT`,
+                    data: currentData.freight[origin].sea.jnpt.slice(sliceStart),
+                    borderColor: colors[origin],
+                    borderDash: [5, 5],
+                    tension: 0.4
+                });
+            });
+            
+            charts.indiaSea = new Chart(ctx, {
+                type: 'line',
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top' } },
+                    scales: { y: { title: { display: true, text: 'USD/TEU' } } }
+                }
+            });
+        }
+
+        function updateUSAirChart() {
+            const ctx = document.getElementById('usAirChart').getContext('2d');
+            const selectedOrigin = document.getElementById('usAirOriginSelect').value;
+            
+            if (charts.usAir) charts.usAir.destroy();
+            
+            let dataPoints = 52;
+            switch(currentTimeRange) {
+                case '2W': dataPoints = 2; break;
+                case '1M': dataPoints = 4; break;
+                case '3M': dataPoints = 13; break;
+                case '6M': dataPoints = 26; break;
+                case '1Y': dataPoints = 52; break;
+                case '2Y': dataPoints = 104; break;
+                case 'Max': dataPoints = currentData.dates.length; break;
+            }
+            
+            const sliceStart = Math.max(0, currentData.dates.length - dataPoints);
+            const labels = currentData.dates.slice(sliceStart).map(d => 
+                `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+            );
+            
+            const datasets = [];
+            const origins = selectedOrigin === 'all' ? 
+                ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'] : [selectedOrigin];
+            const colors = {
+                shanghai: '#3498db',
+                hongkong: '#e74c3c',
+                shenzhen: '#9b59b6',
+                hanoi: '#f39c12',
+                hochiminh: '#2ecc71'
+            };
+            const names = {
+                shanghai: '상해',
+                hongkong: '홍콩',
+                shenzhen: '심천',
+                hanoi: '하노이',
+                hochiminh: '호치민'
+            };
+            
+            origins.forEach(origin => {
+                datasets.push({
+                    label: `${names[origin]} → LAX`,
+                    data: currentData.freight[origin].air.lax.slice(sliceStart),
+                    borderColor: colors[origin],
+                    tension: 0.4
+                });
+                datasets.push({
+                    label: `${names[origin]} → JFK`,
+                    data: currentData.freight[origin].air.jfk.slice(sliceStart),
+                    borderColor: colors[origin],
+                    borderDash: [5, 5],
+                    tension: 0.4
+                });
+            });
+            
+            charts.usAir = new Chart(ctx, {
+                type: 'line',
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top' } },
+                    scales: { y: { title: { display: true, text: 'USD/kg' } } }
+                }
+            });
+        }
+
+        function updateIndiaAirChart() {
+            const ctx = document.getElementById('indiaAirChart').getContext('2d');
+            const selectedOrigin = document.getElementById('indiaAirOriginSelect').value;
+            
+            if (charts.indiaAir) charts.indiaAir.destroy();
+            
+            let dataPoints = 52;
+            switch(currentTimeRange) {
+                case '2W': dataPoints = 2; break;
+                case '1M': dataPoints = 4; break;
+                case '3M': dataPoints = 13; break;
+                case '6M': dataPoints = 26; break;
+                case '1Y': dataPoints = 52; break;
+                case '2Y': dataPoints = 104; break;
+                case 'Max': dataPoints = currentData.dates.length; break;
+            }
+            
+            const sliceStart = Math.max(0, currentData.dates.length - dataPoints);
+            const labels = currentData.dates.slice(sliceStart).map(d => 
+                `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+            );
+            
+            const datasets = [];
+            const origins = selectedOrigin === 'all' ? 
+                ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'] : [selectedOrigin];
+            const colors = {
+                shanghai: '#3498db',
+                hongkong: '#e74c3c',
+                shenzhen: '#9b59b6',
+                hanoi: '#f39c12',
+                hochiminh: '#2ecc71'
+            };
+            const names = {
+                shanghai: '상해',
+                hongkong: '홍콩',
+                shenzhen: '심천',
+                hanoi: '하노이',
+                hochiminh: '호치민'
+            };
+            
+            origins.forEach(origin => {
+                datasets.push({
+                    label: `${names[origin]} → DEL`,
+                    data: currentData.freight[origin].air.del.slice(sliceStart),
+                    borderColor: colors[origin],
+                    tension: 0.4
+                });
+                datasets.push({
+                    label: `${names[origin]} → BOM`,
+                    data: currentData.freight[origin].air.bom.slice(sliceStart),
+                    borderColor: colors[origin],
+                    borderDash: [5, 5],
+                    tension: 0.4
+                });
+            });
+            
+            charts.indiaAir = new Chart(ctx, {
+                type: 'line',
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top' } },
+                    scales: { y: { title: { display: true, text: 'USD/kg' } } }
                 }
             });
         }
@@ -1341,8 +1733,12 @@
                 }
             });
             
-            // 출발지 선택 변경
+            // 출발지 선택 변경 - 모든 차트에 대한 이벤트 리스너
             document.getElementById('usSeaOriginSelect')?.addEventListener('change', updateUSSeaChart);
+            document.getElementById('euSeaOriginSelect')?.addEventListener('change', updateEUSeaChart);
+            document.getElementById('indiaSeaOriginSelect')?.addEventListener('change', updateIndiaSeaChart);
+            document.getElementById('usAirOriginSelect')?.addEventListener('change', updateUSAirChart);
+            document.getElementById('indiaAirOriginSelect')?.addEventListener('change', updateIndiaAirChart);
             
             console.log('대시보드 초기화 완료');
         });
