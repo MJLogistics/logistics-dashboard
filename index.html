@@ -1,1292 +1,637 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MJL 아시아발 글로벌 물류 운임 대시보드</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-        
-        .dashboard {
-            max-width: 1920px;
-            margin: 0 auto;
-            background: rgba(255, 255, 255, 0.98);
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-        }
-        
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 3px solid #e0e0e0;
-        }
-        
-        h1 {
-            color: #2c3e50;
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            background: linear-gradient(135deg, #e74c3c, #c0392b);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-weight: bold;
-        }
-        
-        .subtitle {
-            color: #7f8c8d;
-            font-size: 1.2em;
-            margin-bottom: 15px;
-        }
-        
-        .update-info {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin-top: 10px;
-            flex-wrap: wrap;
-        }
-        
-        .update-time {
-            color: #7f8c8d;
-            font-size: 0.9em;
-        }
-        
-        .data-status {
-            background: #e74c3c;
-            color: white;
-            padding: 3px 10px;
-            border-radius: 15px;
-            font-size: 0.85em;
-        }
-        
-        .sync-status {
-            background: #27ae60;
-            color: white;
-            padding: 3px 10px;
-            border-radius: 15px;
-            font-size: 0.85em;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-        }
-        
-        .sync-status.syncing {
-            background: #f39c12;
-        }
-        
-        .sync-status.error {
-            background: #e74c3c;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .spinner {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border: 2px solid #ffffff;
-            border-top: 2px solid transparent;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        
-        .control-panel {
-            background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
-            padding: 25px;
-            border-radius: 15px;
-            margin-bottom: 25px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-        
-        .time-range-buttons {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        
-        .time-btn {
-            padding: 8px 16px;
-            border: 2px solid #e74c3c;
-            background: white;
-            color: #e74c3c;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-        
-        .time-btn.active {
-            background: #e74c3c;
-            color: white;
-        }
-        
-        .time-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-        }
-        
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        
-        .metric-card {
-            background: white;
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-            transition: all 0.3s ease;
-            border-top: 4px solid;
-        }
-        
-        .metric-card:nth-child(1) { border-top-color: #3498db; }
-        .metric-card:nth-child(2) { border-top-color: #e74c3c; }
-        .metric-card:nth-child(3) { border-top-color: #f39c12; }
-        .metric-card:nth-child(4) { border-top-color: #2ecc71; }
-        
-        .metric-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-        }
-        
-        .metric-title {
-            font-size: 0.9em;
-            color: #7f8c8d;
-            font-weight: 600;
-            margin-bottom: 10px;
-        }
-        
-        .metric-value {
-            font-size: 2.2em;
-            font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: 10px;
-        }
-        
-        .metric-change {
-            font-size: 1em;
-            padding: 5px 10px;
-            border-radius: 12px;
-            display: inline-block;
-            font-weight: 600;
-        }
-        
-        .positive {
-            color: #27ae60;
-            background: rgba(39, 174, 96, 0.1);
-        }
-        
-        .negative {
-            color: #e74c3c;
-            background: rgba(231, 76, 60, 0.1);
-        }
-        
-        .freight-table {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-            margin-bottom: 30px;
-            overflow-x: auto;
-        }
-        
-        .freight-table table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.9em;
-        }
-        
-        .freight-table th, .freight-table td {
-            padding: 10px 8px;
-            text-align: center;
-            border: 1px solid #e0e0e0;
-            white-space: nowrap;
-        }
-        
-        .freight-table th {
-            background: #e74c3c;
-            color: white;
-            font-weight: 600;
-        }
-        
-        .freight-table td {
-            font-weight: 500;
-        }
-        
-        .origin-header {
-            background: #34495e !important;
-        }
-        
-        .destination-header {
-            background: #2c3e50 !important;
-            font-size: 0.85em;
-        }
-        
-        .chart-container {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-            margin-bottom: 30px;
-        }
-        
-        .charts-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-            gap: 30px;
-            margin-bottom: 30px;
-        }
-        
-        .chart-title {
-            font-size: 1.3em;
-            color: #2c3e50;
-            margin-bottom: 20px;
-            font-weight: 600;
-        }
-        
-        .chart-canvas {
-            position: relative;
-            height: 400px;
-            width: 100%;
-        }
-        
-        .tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #e0e0e0;
-        }
-        
-        .tab {
-            padding: 10px 20px;
-            background: none;
-            border: none;
-            color: #7f8c8d;
-            cursor: pointer;
-            font-weight: 600;
-            position: relative;
-            transition: all 0.3s;
-        }
-        
-        .tab.active {
-            color: #e74c3c;
-        }
-        
-        .tab.active::after {
-            content: '';
-            position: absolute;
-            bottom: -2px;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: #e74c3c;
-        }
-        
-        .tab-content {
-            display: none;
-        }
-        
-        .tab-content.active {
-            display: block;
-        }
-        
-        .origin-selector {
-            margin-bottom: 15px;
-        }
-        
-        .origin-selector select {
-            padding: 8px 12px;
-            border: 2px solid #e74c3c;
-            border-radius: 6px;
-            font-size: 0.9em;
-            background: white;
-            cursor: pointer;
-        }
-        
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            display: none;
-        }
-        
-        .loading-overlay.active {
-            display: flex;
-        }
-        
-        .loading-content {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            text-align: center;
-        }
-        
-        .loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #e74c3c;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-        
-        .data-source-info {
-            background: #ecf0f1;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            font-size: 0.9em;
-            color: #34495e;
-        }
-        
-        .data-source-info a {
-            color: #3498db;
-            text-decoration: none;
-        }
-        
-        .data-source-info a:hover {
-            text-decoration: underline;
-        }
-        
-        @media (max-width: 768px) {
-            .charts-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .freight-table {
-                font-size: 0.8em;
-            }
-            
-            .freight-table th, .freight-table td {
-                padding: 6px 4px;
-            }
-            
-            h1 {
-                font-size: 1.8em;
-            }
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MJL 아시아발 글로벌 물류 운임 대시보드</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* ====== (스타일 원문 그대로 유지) ====== */
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:linear-gradient(135deg,#1e3c72 0%,#2a5298 100%);min-height:100vh;padding:20px}
+    .dashboard{max-width:1920px;margin:0 auto;background:rgba(255,255,255,.98);border-radius:20px;padding:30px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+    .header{text-align:center;margin-bottom:30px;padding-bottom:20px;border-bottom:3px solid #e0e0e0}
+    h1{color:#2c3e50;font-size:2.5em;margin-bottom:10px;background:linear-gradient(135deg,#e74c3c,#c0392b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:bold}
+    .subtitle{color:#7f8c8d;font-size:1.2em;margin-bottom:15px}
+    .update-info{display:flex;justify-content:center;gap:20px;margin-top:10px;flex-wrap:wrap}
+    .update-time{color:#7f8c8d;font-size:.9em}
+    .data-status{background:#e74c3c;color:#fff;padding:3px 10px;border-radius:15px;font-size:.85em}
+    .sync-status{background:#27ae60;color:#fff;padding:3px 10px;border-radius:15px;font-size:.85em;display:inline-flex;align-items:center;gap:5px}
+    .sync-status.syncing{background:#f39c12}
+    .sync-status.error{background:#e74c3c}
+    @keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+    .spinner{display:inline-block;width:12px;height:12px;border:2px solid #fff;border-top:2px solid transparent;border-radius:50%;animation:spin 1s linear infinite}
+    .control-panel{background:linear-gradient(135deg,#ffeaa7 0%,#fdcb6e 100%);padding:25px;border-radius:15px;margin-bottom:25px;box-shadow:0 5px 15px rgba(0,0,0,.1)}
+    .time-range-buttons{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+    .time-btn{padding:8px 16px;border:2px solid #e74c3c;background:#fff;color:#e74c3c;border-radius:8px;cursor:pointer;font-weight:600;transition:.3s}
+    .time-btn.active{background:#e74c3c;color:#fff}
+    .time-btn:hover{transform:translateY(-2px);box-shadow:0 4px 15px rgba(0,0,0,.2)}
+    .metrics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;margin-bottom:30px}
+    .metric-card{background:#fff;border-radius:15px;padding:20px;box-shadow:0 5px 15px rgba(0,0,0,.08);transition:.3s;border-top:4px solid}
+    .metric-card:nth-child(1){border-top-color:#3498db}
+    .metric-card:nth-child(2){border-top-color:#e74c3c}
+    .metric-card:nth-child(3){border-top-color:#f39c12}
+    .metric-card:nth-child(4){border-top-color:#2ecc71}
+    .metric-card:hover{transform:translateY(-5px);box-shadow:0 10px 25px rgba(0,0,0,.15)}
+    .metric-title{font-size:.9em;color:#7f8c8d;font-weight:600;margin-bottom:10px}
+    .metric-value{font-size:2.2em;font-weight:bold;color:#2c3e50;margin-bottom:10px}
+    .metric-change{font-size:1em;padding:5px 10px;border-radius:12px;display:inline-block;font-weight:600}
+    .positive{color:#27ae60;background:rgba(39,174,96,.1)}
+    .negative{color:#e74c3c;background:rgba(231,76,60,.1)}
+    .freight-table{background:#fff;border-radius:15px;padding:25px;box-shadow:0 5px 15px rgba(0,0,0,.08);margin-bottom:30px;overflow-x:auto}
+    .freight-table table{width:100%;border-collapse:collapse;font-size:.9em}
+    .freight-table th,.freight-table td{padding:10px 8px;text-align:center;border:1px solid #e0e0e0;white-space:nowrap}
+    .freight-table th{background:#e74c3c;color:#fff;font-weight:600}
+    .freight-table td{font-weight:500}
+    .origin-header{background:#34495e!important}
+    .destination-header{background:#2c3e50!important;font-size:.85em}
+    .chart-container{background:#fff;border-radius:15px;padding:25px;box-shadow:0 5px 15px rgba(0,0,0,.08);margin-bottom:30px}
+    .charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(500px,1fr));gap:30px;margin-bottom:30px}
+    .chart-title{font-size:1.3em;color:#2c3e50;margin-bottom:20px;font-weight:600}
+    .chart-canvas{position:relative;height:400px;width:100%}
+    .tabs{display:flex;gap:10px;margin-bottom:20px;border-bottom:2px solid #e0e0e0}
+    .tab{padding:10px 20px;background:none;border:none;color:#7f8c8d;cursor:pointer;font-weight:600;position:relative;transition:.3s}
+    .tab.active{color:#e74c3c}
+    .tab.active::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:2px;background:#e74c3c}
+    .tab-content{display:none}
+    .tab-content.active{display:block}
+    .origin-selector{margin-bottom:15px}
+    .origin-selector select{padding:8px 12px;border:2px solid #e74c3c;border-radius:6px;font-size:.9em;background:#fff;cursor:pointer}
+    .loading-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;justify-content:center;align-items:center;z-index:9999}
+    .loading-overlay.active{display:flex}
+    .loading-content{background:#fff;padding:30px;border-radius:15px;text-align:center}
+    .loading-spinner{width:50px;height:50px;border:4px solid #f3f3f3;border-top:4px solid #e74c3c;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 20px}
+    .data-source-info{background:#ecf0f1;padding:15px;border-radius:10px;margin-bottom:20px;font-size:.9em;color:#34495e}
+    .data-source-info a{color:#3498db;text-decoration:none}
+    .data-source-info a:hover{text-decoration:underline}
+    @media (max-width:768px){
+      .charts-grid{grid-template-columns:1fr}
+      .freight-table{font-size:.8em}
+      .freight-table th,.freight-table td{padding:6px 4px}
+      h1{font-size:1.8em}
+    }
+  </style>
 </head>
 <body>
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="loading-content">
-            <div class="loading-spinner"></div>
-            <p>데이터를 불러오는 중...</p>
-        </div>
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-content">
+      <div class="loading-spinner"></div>
+      <p>데이터를 불러오는 중...</p>
+    </div>
+  </div>
+
+  <div class="dashboard">
+    <div class="header">
+      <h1>🚢 ✈️ MJL 아시아발 글로벌 물류 운임 대시보드</h1>
+      <div class="subtitle">MJ LOGISTICS GLOBAL FREIGHT RATE DASHBOARD</div>
+      <div class="update-info">
+        <span class="update-time" id="updateTime">마지막 업데이트: -</span>
+        <span class="data-status">아시아(중국/베트남) → 북미/유럽/인도</span>
+        <span class="sync-status" id="syncStatus">
+          <span class="spinner"></span><span id="syncText">연결 중...</span>
+        </span>
+      </div>
     </div>
 
-    <div class="dashboard">
-        <div class="header">
-            <h1>🚢 ✈️ MJL 아시아발 글로벌 물류 운임 대시보드</h1>
-            <div class="subtitle">MJ LOGISTICS GLOBAL FREIGHT RATE DASHBOARD</div>
-            <div class="update-info">
-                <span class="update-time" id="updateTime">마지막 업데이트: -</span>
-                <span class="data-status">아시아(중국/베트남) → 북미/유럽/인도</span>
-                <span class="sync-status" id="syncStatus">
-                    <span class="spinner"></span>
-                    <span id="syncText">연결 중...</span>
-                </span>
-            </div>
-        </div>
-
-        <div class="data-source-info">
-            📊 <strong>실시간 데이터 연동</strong><br>
-            Google Sheets와 자동 연동되어 실시간으로 업데이트됩니다.<br>
-            데이터 수정이 필요한 경우 <a href="#" id="sheetLink" target="_blank">스프레드시트 열기</a>
-        </div>
-
-        <div class="control-panel">
-            <div class="time-range-buttons">
-                <button class="time-btn" data-range="2W">2주</button>
-                <button class="time-btn" data-range="1M">1개월</button>
-                <button class="time-btn" data-range="3M">3개월</button>
-                <button class="time-btn" data-range="6M">6개월</button>
-                <button class="time-btn active" data-range="1Y">1년</button>
-                <button class="time-btn" data-range="2Y">2년</button>
-                <button class="time-btn" data-range="Max">전체</button>
-            </div>
-        </div>
-
-        <div class="metrics-grid" id="metricsGrid">
-            <div class="metric-card">
-                <div class="metric-title">발틱운임지수 (BDI)</div>
-                <div class="metric-value" id="bdiValue">-</div>
-                <span class="metric-change" id="bdiChange">-</span>
-            </div>
-            <div class="metric-card">
-                <div class="metric-title">상해컨테이너운임지수 (SCFI)</div>
-                <div class="metric-value" id="scfiValue">-</div>
-                <span class="metric-change" id="scfiChange">-</span>
-            </div>
-            <div class="metric-card">
-                <div class="metric-title">중국컨테이너운임지수 (CCFI)</div>
-                <div class="metric-value" id="ccfiValue">-</div>
-                <span class="metric-change" id="ccfiChange">-</span>
-            </div>
-            <div class="metric-card">
-                <div class="metric-title">HRCI 지수</div>
-                <div class="metric-value" id="hrciValue">-</div>
-                <span class="metric-change" id="hrciChange">-</span>
-            </div>
-        </div>
-
-        <div class="freight-table">
-            <h3 class="chart-title">📊 운임 현황 <span id="rateDate" style="color: #e74c3c; font-size: 0.9em;"></span></h3>
-            
-            <div class="tabs">
-                <button class="tab active" onclick="switchTab('sea')">🚢 해상 운임</button>
-                <button class="tab" onclick="switchTab('air')">✈️ 항공 운임</button>
-            </div>
-            
-            <div id="seaTab" class="tab-content active">
-                <table>
-                    <thead>
-                        <tr>
-                            <th rowspan="3" class="origin-header">출발지</th>
-                            <th colspan="2">북미서부</th>
-                            <th colspan="1">유럽</th>
-                            <th colspan="3">인도</th>
-                        </tr>
-                        <tr class="destination-header">
-                            <th>LA</th>
-                            <th>롱비치</th>
-                            <th>로테르담</th>
-                            <th>Kandla</th>
-                            <th>Paradip</th>
-                            <th>JNPT</th>
-                        </tr>
-                        <tr class="destination-header">
-                            <th colspan="6" style="font-size: 0.8em; background: #7f8c8d;">단위: USD/TEU</th>
-                        </tr>
-                    </thead>
-                    <tbody id="seaTableBody">
-                        <!-- 동적 생성 -->
-                    </tbody>
-                </table>
-            </div>
-            
-            <div id="airTab" class="tab-content">
-                <table>
-                    <thead>
-                        <tr>
-                            <th rowspan="3" class="origin-header">출발지</th>
-                            <th colspan="2">북미</th>
-                            <th colspan="1">유럽</th>
-                            <th colspan="3">인도</th>
-                        </tr>
-                        <tr class="destination-header">
-                            <th>LAX</th>
-                            <th>JFK</th>
-                            <th>VIE</th>
-                            <th>DEL</th>
-                            <th>BOM</th>
-                            <th>BLR</th>
-                        </tr>
-                        <tr class="destination-header">
-                            <th colspan="6" style="font-size: 0.8em; background: #7f8c8d;">단위: USD/kg</th>
-                        </tr>
-                    </thead>
-                    <tbody id="airTableBody">
-                        <!-- 동적 생성 -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="charts-grid">
-            <div class="chart-container">
-                <h3 class="chart-title">📈 해운 지수 추이</h3>
-                <div class="chart-canvas">
-                    <canvas id="indexChart"></canvas>
-                </div>
-            </div>
-            
-            <div class="chart-container">
-                <h3 class="chart-title">🚢 북미 해상 운임 비교</h3>
-                <div class="origin-selector">
-                    <label>출발지: </label>
-                    <select id="usSeaOriginSelect">
-                        <option value="all">전체</option>
-                        <option value="shanghai">상해</option>
-                        <option value="hongkong">홍콩</option>
-                        <option value="shenzhen">심천</option>
-                        <option value="hanoi">하노이</option>
-                        <option value="hochiminh">호치민</option>
-                    </select>
-                </div>
-                <div class="chart-canvas">
-                    <canvas id="usSeaChart"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <div class="charts-grid">
-            <div class="chart-container">
-                <h3 class="chart-title">🚢 유럽 해상 운임 비교</h3>
-                <div class="origin-selector">
-                    <label>출발지: </label>
-                    <select id="euSeaOriginSelect">
-                        <option value="all">전체</option>
-                        <option value="shanghai">상해</option>
-                        <option value="hongkong">홍콩</option>
-                        <option value="shenzhen">심천</option>
-                        <option value="hanoi">하노이</option>
-                        <option value="hochiminh">호치민</option>
-                    </select>
-                </div>
-                <div class="chart-canvas">
-                    <canvas id="euSeaChart"></canvas>
-                </div>
-            </div>
-            
-            <div class="chart-container">
-                <h3 class="chart-title">✈️ 항공 운임 비교</h3>
-                <div class="origin-selector">
-                    <label>출발지: </label>
-                    <select id="airOriginSelect">
-                        <option value="all">전체</option>
-                        <option value="shanghai">상해</option>
-                        <option value="hongkong">홍콩</option>
-                        <option value="shenzhen">심천</option>
-                        <option value="hanoi">하노이</option>
-                        <option value="hochiminh">호치민</option>
-                    </select>
-                </div>
-                <div class="chart-canvas">
-                    <canvas id="airChart"></canvas>
-                </div>
-            </div>
-        </div>
+    <div class="data-source-info">
+      📊 <strong>실시간 데이터 연동</strong><br/>
+      Google Sheets와 자동 연동되어 실시간으로 업데이트됩니다.<br/>
+      데이터 수정이 필요한 경우 <a href="#" id="sheetLink" target="_blank">스프레드시트 열기</a>
     </div>
 
-    <script>
-        // ==================== 설정 ====================
-        // Google Apps Script 웹 앱 URL (실제 URL로 교체 필요)
-        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzMb5jrh7SpUdTaaKAMxw_ds22V9f5vdGWkunsmtOxeoKdrSqzTElqGsZ1v8EgPWMo/exec';
-        // Google Sheets URL (실제 URL로 교체 필요)
-        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1FST2PUn1-2cxLiv6igJ_ssCKAC9gaqvVv22j83UApts/edit';
-        
-        // 자동 새로고침 간격 (5분)
-        const REFRESH_INTERVAL = 5 * 60 * 1000;
-        
-        // ==================== 전역 변수 ====================
-        let currentData = {
-            dates: [],
-            indices: {
-                BDI: [],
-                SCFI: [],
-                CCFI: [],
-                HRCI: []
-            },
-            freight: {
-                shanghai: {
-                    sea: { la: [], longbeach: [], rotterdam: [], kandla: [], paradip: [], jnpt: [] },
-                    air: { lax: [], jfk: [], vie: [], del: [], bom: [], blr: [] }
-                },
-                hongkong: {
-                    sea: { la: [], longbeach: [], rotterdam: [], kandla: [], paradip: [], jnpt: [] },
-                    air: { lax: [], jfk: [], vie: [], del: [], bom: [], blr: [] }
-                },
-                shenzhen: {
-                    sea: { la: [], longbeach: [], rotterdam: [], kandla: [], paradip: [], jnpt: [] },
-                    air: { lax: [], jfk: [], vie: [], del: [], bom: [], blr: [] }
-                },
-                hanoi: {
-                    sea: { la: [], longbeach: [], rotterdam: [], kandla: [], paradip: [], jnpt: [] },
-                    air: { lax: [], jfk: [], vie: [], del: [], bom: [], blr: [] }
-                },
-                hochiminh: {
-                    sea: { la: [], longbeach: [], rotterdam: [], kandla: [], paradip: [], jnpt: [] },
-                    air: { lax: [], jfk: [], vie: [], del: [], bom: [], blr: [] }
-                }
-            }
-        };
-        
-        let charts = {};
-        let currentTimeRange = '1Y';
-        let refreshTimer = null;
-        
-        // ==================== 데이터 로드 함수 ====================
-        // JSONP 콜백 함수
-// JSONP 콜백 함수
-window.handleGoogleSheetsData = function(result) {
-    try {
-        if (result.status === 'success' && result.data) {
-            parseSheetData(result.data);
-            updateAllUI();
-            updateSyncStatus('success', '동기화 완료');
-            
-            const now = new Date();
-            document.getElementById('updateTime').textContent = 
-                `마지막 업데이트: ${now.toLocaleString('ko-KR')}`;
-        } else {
-            throw new Error('데이터 로드 실패');
-        }
-    } catch (error) {
-        console.error('데이터 처리 오류:', error);
-        updateSyncStatus('error', '데이터 오류');
-        loadSampleData();
-    } finally {
-        showLoading(false);
+    <div class="control-panel">
+      <div class="time-range-buttons">
+        <button class="time-btn" data-range="2W">2주</button>
+        <button class="time-btn" data-range="1M">1개월</button>
+        <button class="time-btn" data-range="3M">3개월</button>
+        <button class="time-btn" data-range="6M">6개월</button>
+        <button class="time-btn active" data-range="1Y">1년</button>
+        <button class="time-btn" data-range="2Y">2년</button>
+        <button class="time-btn" data-range="Max">전체</button>
+      </div>
+    </div>
+
+    <div class="metrics-grid" id="metricsGrid">
+      <div class="metric-card">
+        <div class="metric-title">발틱운임지수 (BDI)</div>
+        <div class="metric-value" id="bdiValue">-</div>
+        <span class="metric-change" id="bdiChange">-</span>
+      </div>
+      <div class="metric-card">
+        <div class="metric-title">상해컨테이너운임지수 (SCFI)</div>
+        <div class="metric-value" id="scfiValue">-</div>
+        <span class="metric-change" id="scfiChange">-</span>
+      </div>
+      <div class="metric-card">
+        <div class="metric-title">중국컨테이너운임지수 (CCFI)</div>
+        <div class="metric-value" id="ccfiValue">-</div>
+        <span class="metric-change" id="ccfiChange">-</span>
+      </div>
+      <div class="metric-card">
+        <div class="metric-title">HRCI 지수</div>
+        <div class="metric-value" id="hrciValue">-</div>
+        <span class="metric-change" id="hrciChange">-</span>
+      </div>
+    </div>
+
+    <div class="freight-table">
+      <h3 class="chart-title">📊 운임 현황 <span id="rateDate" style="color:#e74c3c;font-size:.9em;"></span></h3>
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('sea')">🚢 해상 운임</button>
+        <button class="tab" onclick="switchTab('air')">✈️ 항공 운임</button>
+      </div>
+
+      <div id="seaTab" class="tab-content active">
+        <table>
+          <thead>
+            <tr>
+              <th rowspan="3" class="origin-header">출발지</th>
+              <th colspan="2">북미서부</th>
+              <th colspan="1">유럽</th>
+              <th colspan="3">인도</th>
+            </tr>
+            <tr class="destination-header">
+              <th>LA</th><th>롱비치</th><th>로테르담</th><th>Kandla</th><th>Paradip</th><th>JNPT</th>
+            </tr>
+            <tr class="destination-header">
+              <th colspan="6" style="font-size:.8em;background:#7f8c8d;">단위: USD/TEU</th>
+            </tr>
+          </thead>
+          <tbody id="seaTableBody"></tbody>
+        </table>
+      </div>
+
+      <div id="airTab" class="tab-content">
+        <table>
+          <thead>
+            <tr>
+              <th rowspan="3" class="origin-header">출발지</th>
+              <th colspan="2">북미</th>
+              <th colspan="1">유럽</th>
+              <th colspan="3">인도</th>
+            </tr>
+            <tr class="destination-header">
+              <th>LAX</th><th>JFK</th><th>VIE</th><th>DEL</th><th>BOM</th><th>BLR</th>
+            </tr>
+            <tr class="destination-header">
+              <th colspan="6" style="font-size:.8em;background:#7f8c8d;">단위: USD/kg</th>
+            </tr>
+          </thead>
+          <tbody id="airTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="chart-container">
+        <h3 class="chart-title">📈 해운 지수 추이</h3>
+        <div class="chart-canvas"><canvas id="indexChart"></canvas></div>
+      </div>
+      <div class="chart-container">
+        <h3 class="chart-title">🚢 북미 해상 운임 비교</h3>
+        <div class="origin-selector">
+          <label>출발지: </label>
+          <select id="usSeaOriginSelect">
+            <option value="all">전체</option>
+            <option value="shanghai">상해</option>
+            <option value="hongkong">홍콩</option>
+            <option value="shenzhen">심천</option>
+            <option value="hanoi">하노이</option>
+            <option value="hochiminh">호치민</option>
+          </select>
+        </div>
+        <div class="chart-canvas"><canvas id="usSeaChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="chart-container">
+        <h3 class="chart-title">🚢 유럽 해상 운임 비교</h3>
+        <div class="origin-selector">
+          <label>출발지: </label>
+          <select id="euSeaOriginSelect">
+            <option value="all">전체</option>
+            <option value="shanghai">상해</option>
+            <option value="hongkong">홍콩</option>
+            <option value="shenzhen">심천</option>
+            <option value="hanoi">하노이</option>
+            <option value="hochiminh">호치민</option>
+          </select>
+        </div>
+        <div class="chart-canvas"><canvas id="euSeaChart"></canvas></div>
+      </div>
+      <div class="chart-container">
+        <h3 class="chart-title">✈️ 항공 운임 비교</h3>
+        <div class="origin-selector">
+          <label>출발지: </label>
+          <select id="airOriginSelect">
+            <option value="all">전체</option>
+            <option value="shanghai">상해</option>
+            <option value="hongkong">홍콩</option>
+            <option value="shenzhen">심천</option>
+            <option value="hanoi">하노이</option>
+            <option value="hochiminh">호치민</option>
+          </select>
+        </div>
+        <div class="chart-canvas"><canvas id="airChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ==================== 설정 ==================== */
+    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzMb5jrh7SpUdTaaKAMxw_ds22V9f5vdGWkunsmtOxeoKdrSqzTElqGsZ1v8EgPWMo/exec';
+    const SHEET_URL   = 'https://docs.google.com/spreadsheets/d/1FST2PUn1-2cxLiv6igJ_ssCKAC9gaqvVv22j83UApts/edit';
+    const REFRESH_INTERVAL = 5 * 60 * 1000; // 5분
+
+    /* ==================== 전역 상태 ==================== */
+    let currentData = initData();
+    let charts = {};
+    let currentTimeRange = '1Y';
+    let refreshTimer = null;
+
+    function initData(){
+      return {
+        dates: [],
+        indices: { BDI: [], SCFI: [], CCFI: [], HRCI: [] },
+        freight: ['shanghai','hongkong','shenzhen','hanoi','hochiminh']
+          .reduce((acc,o)=>{
+            acc[o]={ 
+              sea:{ la:[], longbeach:[], rotterdam:[], kandla:[], paradip:[], jnpt:[] },
+              air:{ lax:[], jfk:[],        vie:[],      del:[],    bom:[],   blr:[] }
+            };
+            return acc;
+          },{})
+      };
     }
-}; // 세미콜론 확인!
 
-// loadDataFromGoogleSheets 함수
-async function loadDataFromGoogleSheets() {
-    showLoading(true);
-    updateSyncStatus('syncing', '데이터 동기화 중...');
-    
-    try {
-        // 기존 JSONP 스크립트 제거
-        const oldScript = document.getElementById('sheets-data-script');
-        if (oldScript) {
-            oldScript.remove();
+    /* ==================== JSONP 콜백 (Apps Script에서 호출) ==================== */
+    window.handleGoogleSheetsData = function(result){
+      try{
+        if(result && result.status==='success' && Array.isArray(result.data)){
+          parseSheetData(result.data);
+          updateAllUI();
+          updateSyncStatus('success','동기화 완료');
+          document.getElementById('updateTime').textContent =
+            '마지막 업데이트: ' + new Date().toLocaleString('ko-KR');
+        }else{
+          throw new Error('데이터 로드 실패');
         }
-        
-        // JSONP 방식으로 데이터 로드
+      }catch(err){
+        console.error('데이터 처리 오류:', err);
+        updateSyncStatus('error','데이터 오류');
+        loadSampleData(true);
+      }finally{
+        showLoading(false);
+      }
+    };
+
+    /* ==================== Google Sheets 로드(JSONP) ==================== */
+    async function loadDataFromGoogleSheets(){
+      showLoading(true);
+      updateSyncStatus('syncing','데이터 동기화 중...');
+
+      try{
+        const old = document.getElementById('sheets-data-script');
+        if(old) old.remove();
+
         const script = document.createElement('script');
         script.id = 'sheets-data-script';
         script.src = WEB_APP_URL + '?callback=handleGoogleSheetsData';
-        script.onerror = function() {
-            console.error('스크립트 로드 실패');
-            updateSyncStatus('error', '연결 실패');
-            loadSampleData();
-            showLoading(false);
+        script.onerror = function(){
+          console.error('스크립트 로드 실패');
+          updateSyncStatus('error','연결 실패');
+          loadSampleData(true);
+          showLoading(false);
         };
         document.body.appendChild(script);
-        
-    } catch (error) {
-        console.error('데이터 로드 오류:', error);
-        updateSyncStatus('error', '연결 오류');
-        loadSampleData();
+      }catch(err){
+        console.error('데이터 로드 오류:', err);
+        updateSyncStatus('error','연결 오류');
+        loadSampleData(true);
         showLoading(false);
+      }
     }
-}
-};
 
-// JSONP 콜백 함수 추가
-window.handleGoogleSheetsData = function(result) {
-    try {
-        if (result.status === 'success' && result.data) {
-            parseSheetData(result.data);
-            updateAllUI();
-            updateSyncStatus('success', '동기화 완료');
-            
-            const now = new Date();
-            document.getElementById('updateTime').textContent = 
-                `마지막 업데이트: ${now.toLocaleString('ko-KR')}`;
-        } else {
-            throw new Error('데이터 로드 실패');
-        }
-    } catch (error) {
-        console.error('데이터 처리 오류:', error);
-        updateSyncStatus('error', '데이터 오류');
-        loadSampleData();
-    } finally {
-        showLoading(false);
-    }
-};
+    /* ==================== 데이터 파싱 ==================== */
+    function parseSheetData(data){
+      // 첫 행 헤더 제거
+      const rows = data.slice(1);
 
-async function loadDataFromGoogleSheets() {
-    showLoading(true);
-    updateSyncStatus('syncing', '데이터 동기화 중...');
-    
-    try {
-        // 기존 JSONP 스크립트 제거
-        const oldScript = document.getElementById('sheets-data-script');
-        if (oldScript) {
-            oldScript.remove();
-        }
-        
-        // JSONP 방식으로 데이터 로드
-        const script = document.createElement('script');
-        script.id = 'sheets-data-script';
-        script.src = WEB_APP_URL + '?callback=handleGoogleSheetsData';
-        script.onerror = function() {
-            console.error('스크립트 로드 실패');
-            updateSyncStatus('error', '연결 실패');
-            loadSampleData();
-            showLoading(false);
-        };
-        document.body.appendChild(script);
-        
-    } catch (error) {
-        console.error('데이터 로드 오류:', error);
-        updateSyncStatus('error', '연결 오류');
-        loadSampleData();
-        showLoading(false);
+      // 상태 초기화
+      currentData = initData();
+
+      const origins = ['shanghai','hongkong','shenzhen','hanoi','hochiminh'];
+
+      rows.forEach(row=>{
+        if(!row || row.length < 65) return;
+
+        currentData.dates.push(new Date(row[0]));
+        currentData.indices.BDI.push(parseFloat(row[1])||0);
+        currentData.indices.SCFI.push(parseFloat(row[2])||0);
+        currentData.indices.CCFI.push(parseFloat(row[3])||0);
+        currentData.indices.HRCI.push(parseFloat(row[4])||0);
+
+        let col = 5;
+        // 해상 5원산지 x 6목적지 = 30
+        origins.forEach(o=>{
+          currentData.freight[o].sea.la.push(        parseFloat(row[col++])||0);
+          currentData.freight[o].sea.longbeach.push( parseFloat(row[col++])||0);
+          currentData.freight[o].sea.rotterdam.push( parseFloat(row[col++])||0);
+          currentData.freight[o].sea.kandla.push(    parseFloat(row[col++])||0);
+          currentData.freight[o].sea.paradip.push(   parseFloat(row[col++])||0);
+          currentData.freight[o].sea.jnpt.push(      parseFloat(row[col++])||0);
+        });
+        // 항공 5원산지 x 6목적지 = 30
+        origins.forEach(o=>{
+          currentData.freight[o].air.lax.push(parseFloat(row[col++])||0);
+          currentData.freight[o].air.jfk.push(parseFloat(row[col++])||0);
+          currentData.freight[o].air.vie.push(parseFloat(row[col++])||0);
+          currentData.freight[o].air.del.push(parseFloat(row[col++])||0);
+          currentData.freight[o].air.bom.push(parseFloat(row[col++])||0);
+          currentData.freight[o].air.blr.push(parseFloat(row[col++])||0);
+        });
+      });
+
+      console.log(`데이터 로드 완료: ${currentData.dates.length}개 포인트`);
     }
-}
-                
-                if (result.status === 'success' && result.data) {
-                    parseSheetData(result.data);
-                    updateAllUI();
-                    updateSyncStatus('success', '동기화 완료');
-                    
-                    // 마지막 업데이트 시간 표시
-                    const now = new Date();
-                    document.getElementById('updateTime').textContent = 
-                        `마지막 업데이트: ${now.toLocaleString('ko-KR')}`;
-                } else {
-                    throw new Error('데이터 로드 실패');
-                }
-            } catch (error) {
-                console.error('데이터 로드 오류:', error);
-                updateSyncStatus('error', '연결 오류');
-                
-                // 샘플 데이터 로드 (개발/테스트용)
-                loadSampleData();
-            } finally {
-                showLoading(false);
-            }
-        }
-        
-        // ==================== 데이터 파싱 ====================
-        function parseSheetData(data) {
-            // 헤더 제거 (첫 번째 행)
-            const rows = data.slice(1);
-            
-            // 데이터 초기화
-            currentData.dates = [];
-            currentData.indices = { BDI: [], SCFI: [], CCFI: [], HRCI: [] };
-            
-            const origins = ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'];
-            origins.forEach(origin => {
-                currentData.freight[origin] = {
-                    sea: { la: [], longbeach: [], rotterdam: [], kandla: [], paradip: [], jnpt: [] },
-                    air: { lax: [], jfk: [], vie: [], del: [], bom: [], blr: [] }
-                };
-            });
-            
-            // 데이터 파싱
-            rows.forEach(row => {
-                if (row.length < 65) return; // 데이터 불완전한 행 스킵
-                
-                // 날짜
-                currentData.dates.push(new Date(row[0]));
-                
-                // 지수
-                currentData.indices.BDI.push(parseFloat(row[1]) || 0);
-                currentData.indices.SCFI.push(parseFloat(row[2]) || 0);
-                currentData.indices.CCFI.push(parseFloat(row[3]) || 0);
-                currentData.indices.HRCI.push(parseFloat(row[4]) || 0);
-                
-                // 운임 데이터
-                let colIdx = 5;
-                origins.forEach(origin => {
-                    // 해상 운임
-                    currentData.freight[origin].sea.la.push(parseFloat(row[colIdx++]) || 0);
-                    currentData.freight[origin].sea.longbeach.push(parseFloat(row[colIdx++]) || 0);
-                    currentData.freight[origin].sea.rotterdam.push(parseFloat(row[colIdx++]) || 0);
-                    currentData.freight[origin].sea.kandla.push(parseFloat(row[colIdx++]) || 0);
-                    currentData.freight[origin].sea.paradip.push(parseFloat(row[colIdx++]) || 0);
-                    currentData.freight[origin].sea.jnpt.push(parseFloat(row[colIdx++]) || 0);
-                });
-                
-                // 항공 운임
-                origins.forEach(origin => {
-                    currentData.freight[origin].air.lax.push(parseFloat(row[colIdx++]) || 0);
-                    currentData.freight[origin].air.jfk.push(parseFloat(row[colIdx++]) || 0);
-                    currentData.freight[origin].air.vie.push(parseFloat(row[colIdx++]) || 0);
-                    currentData.freight[origin].air.del.push(parseFloat(row[colIdx++]) || 0);
-                    currentData.freight[origin].air.bom.push(parseFloat(row[colIdx++]) || 0);
-                    currentData.freight[origin].air.blr.push(parseFloat(row[colIdx++]) || 0);
-                });
-            });
-            
-            console.log(`데이터 로드 완료: ${currentData.dates.length}개 데이터 포인트`);
-        }
-        
-        // ==================== 샘플 데이터 (개발/테스트용) ====================
-        function loadSampleData() {
-            // 간단한 샘플 데이터 생성
-            const sampleWeeks = 52;
-            const endDate = new Date();
-            
-            for (let i = 0; i < sampleWeeks; i++) {
-                const date = new Date(endDate);
-                date.setDate(date.getDate() - (sampleWeeks - i) * 7);
-                currentData.dates.push(date);
-                
-                // 샘플 지수
-                currentData.indices.BDI.push(1100 + Math.random() * 200);
-                currentData.indices.SCFI.push(900 + Math.random() * 200);
-                currentData.indices.CCFI.push(950 + Math.random() * 100);
-                currentData.indices.HRCI.push(600 + Math.random() * 100);
-                
-                // 샘플 운임
-                const origins = ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'];
-                origins.forEach(origin => {
-                    currentData.freight[origin].sea.la.push(1500 + Math.random() * 300);
-                    currentData.freight[origin].sea.longbeach.push(1550 + Math.random() * 300);
-                    currentData.freight[origin].sea.rotterdam.push(3400 + Math.random() * 400);
-                    currentData.freight[origin].sea.kandla.push(800 + Math.random() * 200);
-                    currentData.freight[origin].sea.paradip.push(850 + Math.random() * 200);
-                    currentData.freight[origin].sea.jnpt.push(900 + Math.random() * 200);
-                    
-                    currentData.freight[origin].air.lax.push(4.5 + Math.random());
-                    currentData.freight[origin].air.jfk.push(5.0 + Math.random());
-                    currentData.freight[origin].air.vie.push(3.8 + Math.random());
-                    currentData.freight[origin].air.del.push(2.5 + Math.random());
-                    currentData.freight[origin].air.bom.push(2.7 + Math.random());
-                    currentData.freight[origin].air.blr.push(2.8 + Math.random());
-                });
-            }
-            
-            updateAllUI();
-            updateSyncStatus('error', '샘플 데이터 (연결 실패)');
-        }
-        
-        // ==================== UI 업데이트 ====================
-        function updateAllUI() {
-            updateMetrics();
-            updateFreightTables();
-            updateCharts();
-        }
-        
-        function updateMetrics() {
-            if (currentData.dates.length === 0) return;
-            
-            const lastIdx = currentData.dates.length - 1;
-            const startIdx = Math.max(0, getStartIndex(currentTimeRange));
-            
-            // BDI
-            const bdiCurrent = currentData.indices.BDI[lastIdx];
-            const bdiStart = currentData.indices.BDI[startIdx];
-            const bdiChange = ((bdiCurrent - bdiStart) / bdiStart * 100).toFixed(1);
-            
-            document.getElementById('bdiValue').textContent = bdiCurrent.toFixed(0);
-            const bdiChangeEl = document.getElementById('bdiChange');
-            bdiChangeEl.textContent = `${bdiChange > 0 ? '▲' : '▼'} ${Math.abs(bdiChange)}%`;
-            bdiChangeEl.className = `metric-change ${bdiChange > 0 ? 'positive' : 'negative'}`;
-            
-            // SCFI
-            const scfiCurrent = currentData.indices.SCFI[lastIdx];
-            const scfiStart = currentData.indices.SCFI[startIdx];
-            const scfiChange = ((scfiCurrent - scfiStart) / scfiStart * 100).toFixed(1);
-            
-            document.getElementById('scfiValue').textContent = scfiCurrent.toFixed(2);
-            const scfiChangeEl = document.getElementById('scfiChange');
-            scfiChangeEl.textContent = `${scfiChange > 0 ? '▲' : '▼'} ${Math.abs(scfiChange)}%`;
-            scfiChangeEl.className = `metric-change ${scfiChange > 0 ? 'positive' : 'negative'}`;
-            
-            // CCFI
-            const ccfiCurrent = currentData.indices.CCFI[lastIdx];
-            const ccfiStart = currentData.indices.CCFI[startIdx];
-            const ccfiChange = ((ccfiCurrent - ccfiStart) / ccfiStart * 100).toFixed(1);
-            
-            document.getElementById('ccfiValue').textContent = ccfiCurrent.toFixed(2);
-            const ccfiChangeEl = document.getElementById('ccfiChange');
-            ccfiChangeEl.textContent = `${ccfiChange > 0 ? '▲' : '▼'} ${Math.abs(ccfiChange)}%`;
-            ccfiChangeEl.className = `metric-change ${ccfiChange > 0 ? 'positive' : 'negative'}`;
-            
-            // HRCI
-            const hrciCurrent = currentData.indices.HRCI[lastIdx];
-            const hrciStart = currentData.indices.HRCI[startIdx];
-            const hrciChange = ((hrciCurrent - hrciStart) / hrciStart * 100).toFixed(1);
-            
-            document.getElementById('hrciValue').textContent = hrciCurrent.toFixed(1);
-            const hrciChangeEl = document.getElementById('hrciChange');
-            hrciChangeEl.textContent = `${hrciChange > 0 ? '▲' : '▼'} ${Math.abs(hrciChange)}%`;
-            hrciChangeEl.className = `metric-change ${hrciChange > 0 ? 'positive' : 'negative'}`;
-            
-            // 날짜 업데이트
-            const lastDate = currentData.dates[lastIdx];
-            document.getElementById('rateDate').textContent = 
-                `(${lastDate.getFullYear()}년 ${lastDate.getMonth() + 1}월 ${lastDate.getDate()}일 기준)`;
-        }
-        
-        function updateFreightTables() {
-            if (currentData.dates.length === 0) return;
-            
-            const lastIdx = currentData.dates.length - 1;
-            const origins = ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'];
-            const originNames = ['🇨🇳 상해', '🇭🇰 홍콩', '🇨🇳 심천', '🇻🇳 하노이', '🇻🇳 호치민'];
-            
-            // 해상 운임 테이블
-            const seaTableBody = document.getElementById('seaTableBody');
-            seaTableBody.innerHTML = '';
-            
-            origins.forEach((origin, i) => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td style="font-weight: bold;">${originNames[i]}</td>
-                    <td>$${currentData.freight[origin].sea.la[lastIdx].toFixed(0)}</td>
-                    <td>$${currentData.freight[origin].sea.longbeach[lastIdx].toFixed(0)}</td>
-                    <td>$${currentData.freight[origin].sea.rotterdam[lastIdx].toFixed(0)}</td>
-                    <td>$${currentData.freight[origin].sea.kandla[lastIdx].toFixed(0)}</td>
-                    <td>$${currentData.freight[origin].sea.paradip[lastIdx].toFixed(0)}</td>
-                    <td>$${currentData.freight[origin].sea.jnpt[lastIdx].toFixed(0)}</td>
-                `;
-                seaTableBody.appendChild(row);
-            });
-            
-            // 항공 운임 테이블
-            const airTableBody = document.getElementById('airTableBody');
-            airTableBody.innerHTML = '';
-            
-            origins.forEach((origin, i) => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td style="font-weight: bold;">${originNames[i]}</td>
-                    <td>$${currentData.freight[origin].air.lax[lastIdx].toFixed(2)}</td>
-                    <td>$${currentData.freight[origin].air.jfk[lastIdx].toFixed(2)}</td>
-                    <td>$${currentData.freight[origin].air.vie[lastIdx].toFixed(2)}</td>
-                    <td>$${currentData.freight[origin].air.del[lastIdx].toFixed(2)}</td>
-                    <td>$${currentData.freight[origin].air.bom[lastIdx].toFixed(2)}</td>
-                    <td>$${currentData.freight[origin].air.blr[lastIdx].toFixed(2)}</td>
-                `;
-                airTableBody.appendChild(row);
-            });
-        }
-        
-        // ==================== 차트 업데이트 ====================
-        function updateCharts() {
-            updateIndexChart();
-            updateUSSeaChart();
-            updateEUSeaChart();
-            updateAirChart();
-        }
-        
-        function updateIndexChart() {
-            const ctx = document.getElementById('indexChart').getContext('2d');
-            
-            if (charts.index) charts.index.destroy();
-            
-            const startIdx = getStartIndex(currentTimeRange);
-            const labels = currentData.dates.slice(startIdx).map(d => 
-                `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-            );
-            
-            charts.index = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'BDI',
-                            data: currentData.indices.BDI.slice(startIdx),
-                            borderColor: '#3498db',
-                            tension: 0.4
-                        },
-                        {
-                            label: 'SCFI',
-                            data: currentData.indices.SCFI.slice(startIdx),
-                            borderColor: '#e74c3c',
-                            tension: 0.4
-                        },
-                        {
-                            label: 'CCFI',
-                            data: currentData.indices.CCFI.slice(startIdx),
-                            borderColor: '#f39c12',
-                            tension: 0.4
-                        },
-                        {
-                            label: 'HRCI',
-                            data: currentData.indices.HRCI.slice(startIdx),
-                            borderColor: '#2ecc71',
-                            tension: 0.4,
-                            yAxisID: 'y1'
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'top' }
-                    },
-                    scales: {
-                        y: {
-                            type: 'linear',
-                            display: true,
-                            position: 'left'
-                        },
-                        y1: {
-                            type: 'linear',
-                            display: true,
-                            position: 'right',
-                            grid: { drawOnChartArea: false }
-                        }
-                    }
-                }
-            });
-        }
-        
-        function updateUSSeaChart() {
-            const ctx = document.getElementById('usSeaChart').getContext('2d');
-            const selectedOrigin = document.getElementById('usSeaOriginSelect').value;
-            
-            if (charts.usSea) charts.usSea.destroy();
-            
-            const startIdx = getStartIndex(currentTimeRange);
-            const labels = currentData.dates.slice(startIdx).map(d => 
-                `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-            );
-            
-            const datasets = [];
-            const origins = selectedOrigin === 'all' ? 
-                ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'] : [selectedOrigin];
-            const colors = {
-                shanghai: '#3498db',
-                hongkong: '#e74c3c',
-                shenzhen: '#9b59b6',
-                hanoi: '#f39c12',
-                hochiminh: '#2ecc71'
-            };
-            const names = {
-                shanghai: '상해',
-                hongkong: '홍콩',
-                shenzhen: '심천',
-                hanoi: '하노이',
-                hochiminh: '호치민'
-            };
-            
-            origins.forEach(origin => {
-                datasets.push({
-                    label: `${names[origin]} → LA`,
-                    data: currentData.freight[origin].sea.la.slice(startIdx),
-                    borderColor: colors[origin],
-                    tension: 0.4
-                });
-            });
-            
-            charts.usSea = new Chart(ctx, {
-                type: 'line',
-                data: { labels, datasets },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'top' } },
-                    scales: { y: { title: { display: true, text: 'USD/TEU' } } }
-                }
-            });
-        }
-        
-        function updateEUSeaChart() {
-            const ctx = document.getElementById('euSeaChart').getContext('2d');
-            const selectedOrigin = document.getElementById('euSeaOriginSelect').value;
-            
-            if (charts.euSea) charts.euSea.destroy();
-            
-            const startIdx = getStartIndex(currentTimeRange);
-            const labels = currentData.dates.slice(startIdx).map(d => 
-                `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-            );
-            
-            const datasets = [];
-            const origins = selectedOrigin === 'all' ? 
-                ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'] : [selectedOrigin];
-            const colors = {
-                shanghai: '#3498db',
-                hongkong: '#e74c3c',
-                shenzhen: '#9b59b6',
-                hanoi: '#f39c12',
-                hochiminh: '#2ecc71'
-            };
-            const names = {
-                shanghai: '상해',
-                hongkong: '홍콩',
-                shenzhen: '심천',
-                hanoi: '하노이',
-                hochiminh: '호치민'
-            };
-            
-            origins.forEach(origin => {
-                datasets.push({
-                    label: `${names[origin]} → 로테르담`,
-                    data: currentData.freight[origin].sea.rotterdam.slice(startIdx),
-                    borderColor: colors[origin],
-                    tension: 0.4
-                });
-            });
-            
-            charts.euSea = new Chart(ctx, {
-                type: 'line',
-                data: { labels, datasets },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'top' } },
-                    scales: { y: { title: { display: true, text: 'USD/TEU' } } }
-                }
-            });
-        }
-        
-        function updateAirChart() {
-            const ctx = document.getElementById('airChart').getContext('2d');
-            const selectedOrigin = document.getElementById('airOriginSelect').value;
-            
-            if (charts.air) charts.air.destroy();
-            
-            const startIdx = getStartIndex(currentTimeRange);
-            const labels = currentData.dates.slice(startIdx).map(d => 
-                `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-            );
-            
-            const datasets = [];
-            const origins = selectedOrigin === 'all' ? 
-                ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'] : [selectedOrigin];
-            const colors = {
-                shanghai: '#3498db',
-                hongkong: '#e74c3c',
-                shenzhen: '#9b59b6',
-                hanoi: '#f39c12',
-                hochiminh: '#2ecc71'
-            };
-            const names = {
-                shanghai: '상해',
-                hongkong: '홍콩',
-                shenzhen: '심천',
-                hanoi: '하노이',
-                hochiminh: '호치민'
-            };
-            
-            origins.forEach(origin => {
-                datasets.push({
-                    label: `${names[origin]} → LAX`,
-                    data: currentData.freight[origin].air.lax.slice(startIdx),
-                    borderColor: colors[origin],
-                    tension: 0.4
-                });
-            });
-            
-            charts.air = new Chart(ctx, {
-                type: 'line',
-                data: { labels, datasets },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'top' } },
-                    scales: { y: { title: { display: true, text: 'USD/kg' } } }
-                }
-            });
-        }
-        
-        // ==================== 유틸리티 함수 ====================
-        function getStartIndex(timeRange) {
-            const endIdx = currentData.dates.length - 1;
-            let startIdx = 0;
-            
-            switch(timeRange) {
-                case '2W': startIdx = Math.max(0, endIdx - 2); break;
-                case '1M': startIdx = Math.max(0, endIdx - 4); break;
-                case '3M': startIdx = Math.max(0, endIdx - 13); break;
-                case '6M': startIdx = Math.max(0, endIdx - 26); break;
-                case '1Y': startIdx = Math.max(0, endIdx - 52); break;
-                case '2Y': startIdx = Math.max(0, endIdx - 104); break;
-                case 'Max': startIdx = 0; break;
-            }
-            
-            return startIdx;
-        }
-        
-        function switchTab(tabName) {
-            const tabs = document.querySelectorAll('.tab');
-            const contents = document.querySelectorAll('.tab-content');
-            
-            tabs.forEach(tab => tab.classList.remove('active'));
-            contents.forEach(content => content.classList.remove('active'));
-            
-            if (tabName === 'sea') {
-                tabs[0].classList.add('active');
-                document.getElementById('seaTab').classList.add('active');
-            } else {
-                tabs[1].classList.add('active');
-                document.getElementById('airTab').classList.add('active');
-            }
-        }
-        
-        function showLoading(show) {
-            const overlay = document.getElementById('loadingOverlay');
-            if (show) {
-                overlay.classList.add('active');
-            } else {
-                overlay.classList.remove('active');
-            }
-        }
-        
-        function updateSyncStatus(status, text) {
-            const syncStatus = document.getElementById('syncStatus');
-            const syncText = document.getElementById('syncText');
-            
-            syncStatus.className = 'sync-status';
-            
-            if (status === 'syncing') {
-                syncStatus.classList.add('syncing');
-                syncStatus.innerHTML = '<span class="spinner"></span><span id="syncText">' + text + '</span>';
-            } else if (status === 'error') {
-                syncStatus.classList.add('error');
-                syncStatus.innerHTML = '<span id="syncText">' + text + '</span>';
-            } else {
-                syncStatus.innerHTML = '<span id="syncText">' + text + '</span>';
-            }
-        }
-        
-        // ==================== 이벤트 리스너 ====================
-        document.addEventListener('DOMContentLoaded', function() {
-            // 스프레드시트 링크 설정
-            document.getElementById('sheetLink').href = SHEET_URL;
-            
-            // 시간 범위 버튼
-            document.querySelectorAll('.time-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                    currentTimeRange = this.getAttribute('data-range');
-                    updateMetrics();
-                    updateCharts();
-                });
-            });
-            
-            // 차트 필터 선택
-            document.getElementById('usSeaOriginSelect').addEventListener('change', updateUSSeaChart);
-            document.getElementById('euSeaOriginSelect').addEventListener('change', updateEUSeaChart);
-            document.getElementById('airOriginSelect').addEventListener('change', updateAirChart);
-            
-            // 초기 데이터 로드
-            loadDataFromGoogleSheets();
-            
-            // 자동 새로고침 설정
-            refreshTimer = setInterval(() => {
-                loadDataFromGoogleSheets();
-            }, REFRESH_INTERVAL);
+
+    /* ==================== 샘플 데이터 (안전장치) ==================== */
+    function loadSampleData(reset=false){
+      if(reset) currentData = initData();
+
+      const weeks = 52;
+      const end = new Date();
+      const origins = ['shanghai','hongkong','shenzhen','hanoi','hochiminh'];
+
+      for(let i=0;i<weeks;i++){
+        const d = new Date(end);
+        d.setDate(d.getDate() - (weeks - i)*7);
+        currentData.dates.push(d);
+
+        currentData.indices.BDI.push(1100+Math.random()*200);
+        currentData.indices.SCFI.push(900+Math.random()*200);
+        currentData.indices.CCFI.push(950+Math.random()*100);
+        currentData.indices.HRCI.push(600+Math.random()*100);
+
+        origins.forEach(o=>{
+          currentData.freight[o].sea.la.push(1500+Math.random()*300);
+          currentData.freight[o].sea.longbeach.push(1550+Math.random()*300);
+          currentData.freight[o].sea.rotterdam.push(3400+Math.random()*400);
+          currentData.freight[o].sea.kandla.push(800+Math.random()*200);
+          currentData.freight[o].sea.paradip.push(850+Math.random()*200);
+          currentData.freight[o].sea.jnpt.push(900+Math.random()*200);
+
+          currentData.freight[o].air.lax.push(4.5+Math.random());
+          currentData.freight[o].air.jfk.push(5.0+Math.random());
+          currentData.freight[o].air.vie.push(3.8+Math.random());
+          currentData.freight[o].air.del.push(2.5+Math.random());
+          currentData.freight[o].air.bom.push(2.7+Math.random());
+          currentData.freight[o].air.blr.push(2.8+Math.random());
         });
-        
-        // 페이지 언로드 시 타이머 정리
-        window.addEventListener('beforeunload', function() {
-            if (refreshTimer) {
-                clearInterval(refreshTimer);
-            }
+      }
+
+      updateAllUI();
+      updateSyncStatus('error','샘플 데이터 (연결 실패)');
+    }
+
+    /* ==================== UI 업데이트 ==================== */
+    function updateAllUI(){
+      updateMetrics();
+      updateFreightTables();
+      updateCharts();
+    }
+
+    function safePctChange(curr, start){
+      if(!isFinite(curr) || !isFinite(start) || start===0) return null;
+      return ((curr-start)/start*100);
+    }
+
+    function updateMetrics(){
+      if(currentData.dates.length===0) return;
+
+      const last = currentData.dates.length-1;
+      const startIdx = Math.max(0, getStartIndex(currentTimeRange));
+
+      const sets = [
+        {key:'BDI',  val:'bdiValue',  chg:'bdiChange',  digits:0},
+        {key:'SCFI', val:'scfiValue', chg:'scfiChange', digits:2},
+        {key:'CCFI', val:'ccfiValue', chg:'ccfiChange', digits:2},
+        {key:'HRCI', val:'hrciValue', chg:'hrciChange', digits:1},
+      ];
+
+      sets.forEach(s=>{
+        const curr = currentData.indices[s.key][last] ?? 0;
+        const start= currentData.indices[s.key][startIdx] ?? 0;
+        const elVal = document.getElementById(s.val);
+        const elChg = document.getElementById(s.chg);
+
+        elVal.textContent = isFinite(curr) ? curr.toFixed(s.digits) : '-';
+
+        const pct = safePctChange(curr, start);
+        if(pct===null){
+          elChg.textContent='-';
+          elChg.className='metric-change';
+        }else{
+          const sign = pct>0 ? '▲' : '▼';
+          elChg.textContent = `${sign} ${Math.abs(pct).toFixed(1)}%`;
+          elChg.className = `metric-change ${pct>0 ? 'positive' : 'negative'}`;
+        }
+      });
+
+      const lastDate = currentData.dates[last];
+      document.getElementById('rateDate').textContent =
+        `(${lastDate.getFullYear()}년 ${lastDate.getMonth()+1}월 ${lastDate.getDate()}일 기준)`;
+    }
+
+    function updateFreightTables(){
+      if(currentData.dates.length===0) return;
+
+      const last = currentData.dates.length-1;
+      const origins = ['shanghai','hongkong','shenzhen','hanoi','hochiminh'];
+      const names   = ['🇨🇳 상해','🇭🇰 홍콩','🇨🇳 심천','🇻🇳 하노이','🇻🇳 호치민'];
+
+      const seaBody = document.getElementById('seaTableBody');
+      seaBody.innerHTML='';
+      origins.forEach((o,i)=>{
+        const row = document.createElement('tr');
+        const s = currentData.freight[o].sea;
+        row.innerHTML = `
+          <td style="font-weight:bold;">${names[i]}</td>
+          <td>$${(s.la[last]||0).toFixed(0)}</td>
+          <td>$${(s.longbeach[last]||0).toFixed(0)}</td>
+          <td>$${(s.rotterdam[last]||0).toFixed(0)}</td>
+          <td>$${(s.kandla[last]||0).toFixed(0)}</td>
+          <td>$${(s.paradip[last]||0).toFixed(0)}</td>
+          <td>$${(s.jnpt[last]||0).toFixed(0)}</td>`;
+        seaBody.appendChild(row);
+      });
+
+      const airBody = document.getElementById('airTableBody');
+      airBody.innerHTML='';
+      origins.forEach((o,i)=>{
+        const a = currentData.freight[o].air;
+        row = document.createElement('tr');
+        row.innerHTML = `
+          <td style="font-weight:bold;">${names[i]}</td>
+          <td>$${(a.lax[last]||0).toFixed(2)}</td>
+          <td>$${(a.jfk[last]||0).toFixed(2)}</td>
+          <td>$${(a.vie[last]||0).toFixed(2)}</td>
+          <td>$${(a.del[last]||0).toFixed(2)}</td>
+          <td>$${(a.bom[last]||0).toFixed(2)}</td>
+          <td>$${(a.blr[last]||0).toFixed(2)}</td>`;
+        airBody.appendChild(row);
+      });
+    }
+
+    /* ==================== 차트 ==================== */
+    function updateCharts(){
+      updateIndexChart();
+      updateUSSeaChart();
+      updateEUSeaChart();
+      updateAirChart();
+    }
+
+    function monthLabels(fromIdx){
+      return currentData.dates.slice(fromIdx).map(d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+    }
+
+    function destroyIfExists(key){
+      if(charts[key]){ charts[key].destroy(); charts[key]=null; }
+    }
+
+    function updateIndexChart(){
+      const el = document.getElementById('indexChart');
+      if(!el) return;
+      const ctx = el.getContext('2d');
+      destroyIfExists('index');
+
+      const start = getStartIndex(currentTimeRange);
+      charts.index = new Chart(ctx,{
+        type:'line',
+        data:{
+          labels: monthLabels(start),
+          datasets:[
+            {label:'BDI',  data: currentData.indices.BDI.slice(start),  borderColor:'#3498db', tension:.4},
+            {label:'SCFI', data: currentData.indices.SCFI.slice(start), borderColor:'#e74c3c', tension:.4},
+            {label:'CCFI', data: currentData.indices.CCFI.slice(start), borderColor:'#f39c12', tension:.4},
+            {label:'HRCI', data: currentData.indices.HRCI.slice(start), borderColor:'#2ecc71', tension:.4, yAxisID:'y1'}
+          ]
+        },
+        options:{
+          responsive:true, maintainAspectRatio:false,
+          plugins:{ legend:{ position:'top' } },
+          scales:{
+            y:{ type:'linear', display:true, position:'left' },
+            y1:{ type:'linear', display:true, position:'right', grid:{ drawOnChartArea:false } }
+          }
+        }
+      });
+    }
+
+    function buildLineChart(canvasId, key, destKey, unitText){
+      const el = document.getElementById(canvasId);
+      if(!el) return;
+      const ctx = el.getContext('2d');
+      destroyIfExists(key);
+
+      const start = getStartIndex(currentTimeRange);
+      const selected = document.getElementById(destKey).value;
+      const origins = (selected==='all') ? ['shanghai','hongkong','shenzhen','hanoi','hochiminh'] : [selected];
+      const colors = { shanghai:'#3498db', hongkong:'#e74c3c', shenzhen:'#9b59b6', hanoi:'#f39c12', hochiminh:'#2ecc71' };
+      const names  = { shanghai:'상해', hongkong:'홍콩', shenzhen:'심천', hanoi:'하노이', hochiminh:'호치민' };
+
+      const datasets = origins.map(o=>({
+        label: `${names[o]} → ${unitText.includes('TEU') ? (key==='usSea'?'LA':'로테르담') : 'LAX'}`,
+        data: (key==='air'
+              ? currentData.freight[o].air.lax
+              : key==='usSea'
+                ? currentData.freight[o].sea.la
+                : currentData.freight[o].sea.rotterdam).slice(start),
+        borderColor: colors[o],
+        tension:.4
+      }));
+
+      charts[key] = new Chart(ctx,{
+        type:'line',
+        data:{ labels: monthLabels(start), datasets },
+        options:{
+          responsive:true, maintainAspectRatio:false,
+          plugins:{ legend:{ position:'top' } },
+          scales:{ y:{ title:{ display:true, text: unitText } } }
+        }
+      });
+    }
+
+    function updateUSSeaChart(){ buildLineChart('usSeaChart','usSea','usSeaOriginSelect','USD/TEU'); }
+    function updateEUSeaChart(){ buildLineChart('euSeaChart','euSea','euSeaOriginSelect','USD/TEU'); }
+    function updateAirChart(){   buildLineChart('airChart','air','airOriginSelect','USD/kg'); }
+
+    /* ==================== 유틸/이벤트 ==================== */
+    function getStartIndex(range){
+      const end = currentData.dates.length-1;
+      if(end<0) return 0;
+      switch(range){
+        case '2W': return Math.max(0, end-2);
+        case '1M': return Math.max(0, end-4);
+        case '3M': return Math.max(0, end-13);
+        case '6M': return Math.max(0, end-26);
+        case '1Y': return Math.max(0, end-52);
+        case '2Y': return Math.max(0, end-104);
+        default: return 0;
+      }
+    }
+
+    function switchTab(name){
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+      if(name==='sea'){
+        document.querySelectorAll('.tab')[0].classList.add('active');
+        document.getElementById('seaTab').classList.add('active');
+      }else{
+        document.querySelectorAll('.tab')[1].classList.add('active');
+        document.getElementById('airTab').classList.add('active');
+      }
+    }
+
+    function showLoading(show){
+      const el = document.getElementById('loadingOverlay');
+      el.classList.toggle('active', !!show);
+    }
+
+    function updateSyncStatus(status,text){
+      const el = document.getElementById('syncStatus');
+      el.className = 'sync-status';
+      if(status==='syncing') el.classList.add('syncing');
+      if(status==='error')   el.classList.add('error');
+      el.innerHTML = (status==='syncing')
+        ? `<span class="spinner"></span><span id="syncText">${text}</span>`
+        : `<span id="syncText">${text}</span>`;
+    }
+
+    document.addEventListener('DOMContentLoaded', ()=>{
+      document.getElementById('sheetLink').href = SHEET_URL;
+
+      document.querySelectorAll('.time-btn').forEach(btn=>{
+        btn.addEventListener('click', function(){
+          document.querySelectorAll('.time-btn').forEach(b=>b.classList.remove('active'));
+          this.classList.add('active');
+          currentTimeRange = this.getAttribute('data-range');
+          updateMetrics(); updateCharts();
         });
-    </script>
+      });
+
+      document.getElementById('usSeaOriginSelect').addEventListener('change', updateUSSeaChart);
+      document.getElementById('euSeaOriginSelect').addEventListener('change', updateEUSeaChart);
+      document.getElementById('airOriginSelect').addEventListener('change', updateAirChart);
+
+      loadDataFromGoogleSheets();
+      refreshTimer = setInterval(loadDataFromGoogleSheets, REFRESH_INTERVAL);
+    });
+
+    window.addEventListener('beforeunload', ()=>{
+      if(refreshTimer) clearInterval(refreshTimer);
+    });
+  </script>
 </body>
 </html>
