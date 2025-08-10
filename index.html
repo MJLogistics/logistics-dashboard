@@ -4,11 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>MJL 아시아발 글로벌 물류 운임 대시보드</title>
-  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- 파비콘 경고 제거(원하면 실제 파비콘으로 교체) -->
   <link rel="icon" href="data:;base64,iVBORw0KGgo=">
   <style>
+    /* === 스타일: 이전 버전 동일 === */
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:linear-gradient(135deg,#1e3c72 0%,#2a5298 100%);min-height:100vh;padding:20px}
     .dashboard{max-width:1920px;margin:0 auto;background:rgba(255,255,255,.98);border-radius:20px;padding:30px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
@@ -97,7 +96,7 @@
 
     <div class="data-source-info">
       📊 <strong>실시간 데이터 연동</strong><br/>
-      Google Sheets와 자동 연동되어 실시간으로 업데이트됩니다.<br/>
+      Google Sheets CSV 또는 Apps Script(JSONP)로 자동 연동됩니다.<br/>
       데이터 수정이 필요한 경우 <a href="#" id="sheetLink" target="_blank">스프레드시트 열기</a>
     </div>
 
@@ -139,7 +138,7 @@
     <div class="freight-table">
       <h3 class="chart-title">📊 운임 현황 <span id="rateDate" style="color:#e74c3c;font-size:.9em;"></span></h3>
 
-      <!-- 날짜 선택 컨트롤 -->
+      <!-- 날짜 선택 -->
       <div class="date-picker" style="display:flex;gap:10px;align-items:center;margin:10px 0 14px 0;">
         <label style="font-weight:600;color:#2c3e50;">
           표시 날짜:
@@ -254,38 +253,36 @@
   </div>
 
   <script>
-    /* ===== 설정 ===== */
+    /* ====== 데이터 소스 선택 ====== */
+    const USE_CSV = true; // CSV 사용(true) / Apps Script(JSONP) 사용(false)
+    const CSV_URL = '<<여기에 구글시트 CSV 퍼블리시 URL 붙여넣기>>';
     const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzMb5jrh7SpUdTaaKAMxw_ds22V9f5vdGWkunsmtOxeoKdrSqzTElqGsZ1v8EgPWMo/exec';
     const SHEET_URL   = 'https://docs.google.com/spreadsheets/d/1FST2PUn1-2cxLiv6igJ_ssCKAC9gaqvVv22j83UApts/edit';
     const REFRESH_INTERVAL = 5 * 60 * 1000;
 
-    /* ===== 전역 상태 ===== */
+    /* ====== 전역 상태 ====== */
     let currentData = initData();
     let charts = {};
     let currentTimeRange = '1Y';
     let refreshTimer = null;
-    let selectedDateIndex = null; // null이면 최신 사용
+    let selectedDateIndex = null;
 
     function initData(){
       return {
         dates: [],
         indices: { BDI: [], SCFI: [], CCFI: [], HRCI: [] },
-        freight: ['shanghai','hongkong','shenzhen','hanoi','hochiminh']
-          .reduce((acc,o)=>{
-            acc[o]={ 
-              sea:{ la:[], longbeach:[], rotterdam:[], kandla:[], paradip:[], jnpt:[] },
-              air:{ lax:[], jfk:[],        vie:[],      del:[],    bom:[],   blr:[] }
-            };
-            return acc;
-          },{})
+        freight: ['shanghai','hongkong','shenzhen','hanoi','hochiminh'].reduce((acc,o)=>{
+          acc[o]={ 
+            sea:{ la:[], longbeach:[], rotterdam:[], kandla:[], paradip:[], jnpt:[] },
+            air:{ lax:[], jfk:[],        vie:[],      del:[],    bom:[],   blr:[] }
+          };
+          return acc;
+        },{})
       };
     }
 
-    /* ===== 유틸 ===== */
-    function ymd(d){
-      const dt = new Date(d);
-      return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
-    }
+    /* ====== 유틸 ====== */
+    function ymd(d){ const dt=new Date(d); return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`; }
     function findClosestIndex(targetDate){
       if(!currentData.dates.length) return null;
       const t = new Date(targetDate).getTime();
@@ -297,25 +294,42 @@
       return best;
     }
 
-    /* ===== JSONP 콜백 ===== */
+    /* ====== CSV 로드 & 파싱 ====== */
+    async function loadDataFromCSV(){
+      showLoading(true);
+      updateSyncStatus('syncing','CSV 동기화 중...');
+      try{
+        const res = await fetch(CSV_URL + (CSV_URL.includes('?')?'&':'?') + '_=' + Date.now(), { cache:'no-store' });
+        if(!res.ok) throw new Error('CSV 요청 실패: ' + res.status);
+        const text = await res.text();
+        const rows = csvToRows(text); // [ [col1, col2, ...], ... ]
+        handleRowsAndRender(rows);
+      }catch(err){
+        console.error('CSV 로드 오류:', err);
+        updateSyncStatus('error','CSV 연결 실패');
+        loadSampleData(true);
+        showLoading(false);
+      }
+    }
+
+    // 주의: 제공된 CSV는 각 줄 전체가 큰따옴표로 감싸짐 + BOM 존재 → 이를 정리
+    function csvToRows(text){
+      const lines = text.split(/\r?\n/).filter(Boolean);
+      const rows = lines.map(line=>{
+        let s = line.replace(/^\uFEFF/, ''); // BOM 제거
+        // 전체가 "...." 인 경우 감싸기 제거
+        if(s.length>=2 && s.startsWith('"') && s.endsWith('"')) s = s.slice(1,-1);
+        s = s.replace(/""/g,'"'); // 이스케이프 복원
+        return s.split(',');      // 값에 콤마가 들어가지 않는 구조(현재 시트) 전제
+      });
+      return rows;
+    }
+
+    /* ====== Apps Script(JSONP) 경로 ====== */
     window.handleGoogleSheetsData = function(result){
       try{
         if(result && result.status==='success' && Array.isArray(result.data)){
-          parseSheetData(result.data);
-          // date input 범위/기본값 반영
-          if(currentData.dates.length){
-            const first = currentData.dates[0], last = currentData.dates[currentData.dates.length-1];
-            const input = document.getElementById('rateDateInput');
-            input.min = ymd(first);
-            input.max = ymd(last);
-            if(!input.value) input.value = ymd(last);
-            selectedDateIndex = null;
-            document.getElementById('dateNearestHint').textContent='';
-            // 시트 날짜를 "마지막 업데이트"로
-            document.getElementById('updateTime').textContent =
-              '마지막 업데이트: ' + last.toLocaleString('ko-KR');
-          }
-          updateAllUI();
+          handleRowsAndRender(result.data);
           updateSyncStatus('success','동기화 완료');
         }else{
           throw new Error('데이터 로드 실패');
@@ -329,7 +343,6 @@
       }
     };
 
-    /* ===== Google Sheets 로드(JSONP) ===== */
     async function loadDataFromGoogleSheets(){
       showLoading(true);
       updateSyncStatus('syncing','데이터 동기화 중...');
@@ -338,9 +351,8 @@
         if(old) old.remove();
         const script = document.createElement('script');
         script.id = 'sheets-data-script';
-        // 캐시 무력화 파라미터 추가
         script.src = WEB_APP_URL + '?callback=handleGoogleSheetsData&_=' + Date.now();
-        script.onerror = function(){
+        script.onerror = ()=>{
           console.error('스크립트 로드 실패');
           updateSyncStatus('error','연결 실패');
           loadSampleData(true);
@@ -355,13 +367,30 @@
       }
     }
 
-    /* ===== 데이터 파싱 ===== */
+    /* ====== 공통: rows → 상태 반영 & 렌더 ====== */
+    function handleRowsAndRender(rows){
+      // rows[0] = 헤더, 이후 데이터
+      parseSheetData(rows);
+      // 날짜 입력 min/max/default
+      if(currentData.dates.length){
+        const first=currentData.dates[0], last=currentData.dates[currentData.dates.length-1];
+        const input=document.getElementById('rateDateInput');
+        input.min=ymd(first); input.max=ymd(last);
+        if(!input.value) input.value=ymd(last);
+        selectedDateIndex=null;
+        document.getElementById('dateNearestHint').textContent='';
+        document.getElementById('updateTime').textContent =
+          '마지막 업데이트: ' + last.toLocaleString('ko-KR');
+      }
+      updateAllUI();
+    }
+
+    /* ====== 데이터 파싱 ====== */
     function parseSheetData(data){
       const rows = data.slice(1); // 헤더 제거
       currentData = initData();
       const origins = ['shanghai','hongkong','shenzhen','hanoi','hochiminh'];
       let skipped = 0;
-
       rows.forEach(row=>{
         if(!row || row.length < 65){ skipped++; return; }
         currentData.dates.push(new Date(row[0]));
@@ -369,7 +398,6 @@
         currentData.indices.SCFI.push(parseFloat(row[2])||0);
         currentData.indices.CCFI.push(parseFloat(row[3])||0);
         currentData.indices.HRCI.push(parseFloat(row[4])||0);
-
         let col = 5;
         origins.forEach(o=>{
           currentData.freight[o].sea.la.push(        parseFloat(row[col++])||0);
@@ -388,21 +416,16 @@
           currentData.freight[o].air.blr.push(parseFloat(row[col++])||0);
         });
       });
-
       if(skipped>0) console.warn(`[대시보드] 열 수 부족으로 스킵한 행: ${skipped}건 (각 행은 65열이어야 합니다)`);
-      console.log(`데이터 로드 완료: ${currentData.dates.length}개 포인트`);
     }
 
-    /* ===== 샘플 데이터 ===== */
+    /* ====== 샘플 데이터 ====== */
     function loadSampleData(reset=false){
       if(reset) currentData = initData();
-      const weeks = 52;
-      const end = new Date();
+      const weeks = 52, end = new Date();
       const origins = ['shanghai','hongkong','shenzhen','hanoi','hochiminh'];
-
       for(let i=0;i<weeks;i++){
-        const d = new Date(end);
-        d.setDate(d.getDate() - (weeks - i)*7);
+        const d=new Date(end); d.setDate(d.getDate() - (weeks - i)*7);
         currentData.dates.push(d);
         currentData.indices.BDI.push(1100+Math.random()*200);
         currentData.indices.SCFI.push(900+Math.random()*200);
@@ -423,76 +446,53 @@
           currentData.freight[o].air.blr.push(2.8+Math.random());
         });
       }
-
-      // date input 세팅
       const input = document.getElementById('rateDateInput');
       if(currentData.dates.length){
         input.min = ymd(currentData.dates[0]);
         input.max = ymd(currentData.dates[currentData.dates.length-1]);
         if(!input.value) input.value = ymd(currentData.dates[currentData.dates.length-1]);
       }
-
       updateAllUI();
       updateSyncStatus('error','샘플 데이터 (연결 실패)');
     }
 
-    /* ===== UI 업데이트 ===== */
-    function updateAllUI(){
-      updateMetrics();
-      updateFreightTables();
-      updateCharts();
-    }
-
-    function safePctChange(curr, start){
-      if(!isFinite(curr) || !isFinite(start) || start===0) return null;
-      return ((curr-start)/start*100);
-    }
+    /* ====== UI 업데이트 ====== */
+    function updateAllUI(){ updateMetrics(); updateFreightTables(); updateCharts(); }
+    function safePctChange(curr, start){ if(!isFinite(curr)||!isFinite(start)||start===0) return null; return ((curr-start)/start*100); }
 
     function updateMetrics(){
-      if(currentData.dates.length===0) return;
-      // 선택된 날짜가 있으면 그 날짜를 기준일 텍스트로 표시
+      if(!currentData.dates.length) return;
       const last = (selectedDateIndex==null) ? currentData.dates.length-1 : selectedDateIndex;
       const startIdx = Math.max(0, getStartIndex(currentTimeRange));
-
       const sets = [
-        {key:'BDI',  val:'bdiValue',  chg:'bdiChange',  digits:0},
-        {key:'SCFI', val:'scfiValue', chg:'scfiChange', digits:2},
-        {key:'CCFI', val:'ccfiValue', chg:'ccfiChange', digits:2},
-        {key:'HRCI', val:'hrciValue', chg:'hrciChange', digits:1},
+        {key:'BDI',val:'bdiValue',chg:'bdiChange',digits:0},
+        {key:'SCFI',val:'scfiValue',chg:'scfiChange',digits:2},
+        {key:'CCFI',val:'ccfiValue',chg:'ccfiChange',digits:2},
+        {key:'HRCI',val:'hrciValue',chg:'hrciChange',digits:1},
       ];
-
       sets.forEach(s=>{
-        const curr = currentData.indices[s.key][currentData.dates.length-1] ?? 0; // 지표 값은 최신 유지
+        const curr = currentData.indices[s.key][currentData.dates.length-1] ?? 0; // 지표 값은 최신 기준
         const start= currentData.indices[s.key][startIdx] ?? 0;
-        const elVal = document.getElementById(s.val);
-        const elChg = document.getElementById(s.chg);
+        const elVal=document.getElementById(s.val), elChg=document.getElementById(s.chg);
         elVal.textContent = isFinite(curr) ? curr.toFixed(s.digits) : '-';
-        const pct = safePctChange(curr, start);
+        const pct = safePctChange(curr,start);
         if(pct===null){ elChg.textContent='-'; elChg.className='metric-change'; }
-        else{
-          const sign = pct>0 ? '▲' : '▼';
-          elChg.textContent = `${sign} ${Math.abs(pct).toFixed(1)}%`;
-          elChg.className = `metric-change ${pct>0 ? 'positive' : 'negative'}`;
-        }
+        else{ const sign=pct>0?'▲':'▼'; elChg.textContent=`${sign} ${Math.abs(pct).toFixed(1)}%`; elChg.className=`metric-change ${pct>0?'positive':'negative'}`; }
       });
-
       const lastDate = currentData.dates[last];
       document.getElementById('rateDate').textContent =
         `(${lastDate.getFullYear()}년 ${lastDate.getMonth()+1}월 ${lastDate.getDate()}일 기준)`;
     }
 
     function updateFreightTables(){
-      if(currentData.dates.length===0) return;
+      if(!currentData.dates.length) return;
       const last = (selectedDateIndex==null) ? currentData.dates.length-1 : selectedDateIndex;
-      const origins = ['shanghai','hongkong','shenzhen','hanoi','hochiminh'];
-      const names   = ['🇨🇳 상해','🇭🇰 홍콩','🇨🇳 심천','🇻🇳 하노이','🇻🇳 호치민'];
-
-      const seaBody = document.getElementById('seaTableBody');
-      seaBody.innerHTML='';
+      const origins=['shanghai','hongkong','shenzhen','hanoi','hochiminh'];
+      const names=['🇨🇳 상해','🇭🇰 홍콩','🇨🇳 심천','🇻🇳 하노이','🇻🇳 호치민'];
+      const seaBody=document.getElementById('seaTableBody'); seaBody.innerHTML='';
       origins.forEach((o,i)=>{
-        const row = document.createElement('tr');
-        const s = currentData.freight[o].sea;
-        row.innerHTML = `
+        const row=document.createElement('tr'); const s=currentData.freight[o].sea;
+        row.innerHTML=`
           <td style="font-weight:bold;">${names[i]}</td>
           <td>$${(s.la[last]||0).toFixed(0)}</td>
           <td>$${(s.longbeach[last]||0).toFixed(0)}</td>
@@ -502,13 +502,10 @@
           <td>$${(s.jnpt[last]||0).toFixed(0)}</td>`;
         seaBody.appendChild(row);
       });
-
-      const airBody = document.getElementById('airTableBody');
-      airBody.innerHTML='';
+      const airBody=document.getElementById('airTableBody'); airBody.innerHTML='';
       origins.forEach((o,i)=>{
-        const a = currentData.freight[o].air;
-        const row = document.createElement('tr');
-        row.innerHTML = `
+        const a=currentData.freight[o].air; const row=document.createElement('tr');
+        row.innerHTML=`
           <td style="font-weight:bold;">${names[i]}</td>
           <td>$${(a.lax[last]||0).toFixed(2)}</td>
           <td>$${(a.jfk[last]||0).toFixed(2)}</td>
@@ -520,84 +517,50 @@
       });
     }
 
-    /* ===== 차트 ===== */
-    function updateCharts(){
-      updateIndexChart();
-      updateUSSeaChart();
-      updateEUSeaChart();
-      updateAirChart();
-    }
-    function monthLabels(fromIdx){
-      return currentData.dates.slice(fromIdx).map(d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
-    }
-    function destroyIfExists(key){
-      if(charts[key]){ charts[key].destroy(); charts[key]=null; }
-    }
+    /* ====== 차트 ====== */
+    function updateCharts(){ updateIndexChart(); updateUSSeaChart(); updateEUSeaChart(); updateAirChart(); }
+    function monthLabels(fromIdx){ return currentData.dates.slice(fromIdx).map(d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`); }
+    function destroyIfExists(key){ if(charts[key]){ charts[key].destroy(); charts[key]=null; } }
     function updateIndexChart(){
-      const el = document.getElementById('indexChart');
-      if(!el) return;
-      const ctx = el.getContext('2d');
-      destroyIfExists('index');
-      const start = getStartIndex(currentTimeRange);
-      charts.index = new Chart(ctx,{
-        type:'line',
-        data:{
-          labels: monthLabels(start),
+      const el=document.getElementById('indexChart'); if(!el) return;
+      const ctx=el.getContext('2d'); destroyIfExists('index');
+      const start=getStartIndex(currentTimeRange);
+      charts.index=new Chart(ctx,{type:'line',
+        data:{labels:monthLabels(start),
           datasets:[
-            {label:'BDI',  data: currentData.indices.BDI.slice(start),  borderColor:'#3498db', tension:.4},
-            {label:'SCFI', data: currentData.indices.SCFI.slice(start), borderColor:'#e74c3c', tension:.4},
-            {label:'CCFI', data: currentData.indices.CCFI.slice(start), borderColor:'#f39c12', tension:.4},
-            {label:'HRCI', data: currentData.indices.HRCI.slice(start), borderColor:'#2ecc71', tension:.4, yAxisID:'y1'}
-          ]
-        },
-        options:{
-          responsive:true, maintainAspectRatio:false,
-          plugins:{ legend:{ position:'top' } },
-          scales:{
-            y:{ type:'linear', display:true, position:'left' },
-            y1:{ type:'linear', display:true, position:'right', grid:{ drawOnChartArea:false } }
-          }
-        }
+            {label:'BDI', data:currentData.indices.BDI.slice(start), borderColor:'#3498db',tension:.4},
+            {label:'SCFI',data:currentData.indices.SCFI.slice(start),borderColor:'#e74c3c',tension:.4},
+            {label:'CCFI',data:currentData.indices.CCFI.slice(start),borderColor:'#f39c12',tension:.4},
+            {label:'HRCI',data:currentData.indices.HRCI.slice(start),borderColor:'#2ecc71',tension:.4,yAxisID:'y1'}
+          ]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},
+          scales:{y:{type:'linear',display:true,position:'left'},
+                  y1:{type:'linear',display:true,position:'right',grid:{drawOnChartArea:false}}}}
       });
     }
-    function buildLineChart(canvasId, key, destKey, unitText){
-      const el = document.getElementById(canvasId);
-      if(!el) return;
-      const ctx = el.getContext('2d');
-      destroyIfExists(key);
-      const start = getStartIndex(currentTimeRange);
-      const selected = document.getElementById(destKey).value;
-      const origins = (selected==='all') ? ['shanghai','hongkong','shenzhen','hanoi','hochiminh'] : [selected];
-      const colors = { shanghai:'#3498db', hongkong:'#e74c3c', shenzhen:'#9b59b6', hanoi:'#f39c12', hochiminh:'#2ecc71' };
-      const names  = { shanghai:'상해', hongkong:'홍콩', shenzhen:'심천', hanoi:'하노이', hochiminh:'호치민' };
-      const datasets = origins.map(o=>({
-        label: `${names[o]} → ${unitText.includes('TEU') ? (key==='usSea'?'LA':'로테르담') : 'LAX'}`,
-        data: (key==='air'
-              ? currentData.freight[o].air.lax
-              : key==='usSea'
-                ? currentData.freight[o].sea.la
-                : currentData.freight[o].sea.rotterdam).slice(start),
-        borderColor: colors[o],
-        tension:.4
+    function buildLineChart(canvasId,key,selectId,unitText){
+      const el=document.getElementById(canvasId); if(!el) return;
+      const ctx=el.getContext('2d'); destroyIfExists(key);
+      const start=getStartIndex(currentTimeRange);
+      const selected=document.getElementById(selectId).value;
+      const origins=(selected==='all')?['shanghai','hongkong','shenzhen','hanoi','hochiminh']:[selected];
+      const colors={shanghai:'#3498db',hongkong:'#e74c3c',shenzhen:'#9b59b6',hanoi:'#f39c12',hochiminh:'#2ecc71'};
+      const names ={shanghai:'상해',hongkong:'홍콩',shenzhen:'심천',hanoi:'하노이',hochiminh:'호치민'};
+      const datasets=origins.map(o=>({
+        label:`${names[o]} → ${unitText.includes('TEU')?(key==='usSea'?'LA':'로테르담'):'LAX'}`,
+        data:(key==='air'?currentData.freight[o].air.lax:(key==='usSea'?currentData.freight[o].sea.la:currentData.freight[o].sea.rotterdam)).slice(start),
+        borderColor:colors[o],tension:.4
       }));
-      charts[key] = new Chart(ctx,{
-        type:'line',
-        data:{ labels: monthLabels(start), datasets },
-        options:{
-          responsive:true, maintainAspectRatio:false,
-          plugins:{ legend:{ position:'top' } },
-          scales:{ y:{ title:{ display:true, text: unitText } } }
-        }
-      });
+      charts[key]=new Chart(ctx,{type:'line',data:{labels:monthLabels(start),datasets},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},scales:{y:{title:{display:true,text:unitText}}}}});
     }
     function updateUSSeaChart(){ buildLineChart('usSeaChart','usSea','usSeaOriginSelect','USD/TEU'); }
     function updateEUSeaChart(){ buildLineChart('euSeaChart','euSea','euSeaOriginSelect','USD/TEU'); }
     function updateAirChart(){   buildLineChart('airChart','air','airOriginSelect','USD/kg'); }
 
-    /* ===== 기타 ===== */
+    /* ====== 기타 ====== */
     function getStartIndex(range){
-      const end = currentData.dates.length-1;
-      if(end<0) return 0;
+      const end=currentData.dates.length-1; if(end<0) return 0;
       switch(range){
         case '2W': return Math.max(0, end-2);
         case '1M': return Math.max(0, end-4);
@@ -611,59 +574,44 @@
     function switchTab(name){
       document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
-      if(name==='sea'){
-        document.querySelectorAll('.tab')[0].classList.add('active');
-        document.getElementById('seaTab').classList.add('active');
-      }else{
-        document.querySelectorAll('.tab')[1].classList.add('active');
-        document.getElementById('airTab').classList.add('active');
-      }
+      if(name==='sea'){ document.querySelectorAll('.tab')[0].classList.add('active'); document.getElementById('seaTab').classList.add('active'); }
+      else{ document.querySelectorAll('.tab')[1].classList.add('active'); document.getElementById('airTab').classList.add('active'); }
     }
-    function showLoading(show){
-      const el = document.getElementById('loadingOverlay');
-      el.classList.toggle('active', !!show);
-    }
+    function showLoading(show){ document.getElementById('loadingOverlay').classList.toggle('active', !!show); }
     function updateSyncStatus(status,text){
-      const el = document.getElementById('syncStatus');
-      const base = 'sync-status';
-      el.className = base + (status==='syncing' ? ' syncing' : status==='error' ? ' error' : '');
-      el.innerHTML = (status==='syncing')
-        ? `<span class="spinner"></span><span id="syncText">${text}</span>`
-        : `<span id="syncText">${text}</span>`;
+      const el=document.getElementById('syncStatus');
+      el.className='sync-status' + (status==='syncing'?' syncing':status==='error'?' error':'');
+      el.innerHTML=(status==='syncing')?`<span class="spinner"></span><span id="syncText">${text}</span>`:`<span id="syncText">${text}</span>`;
     }
 
-    /* ===== 이벤트 ===== */
+    /* ====== 날짜 컨트롤 ====== */
     function applySelectedDateFromInput(){
-      const inputVal = document.getElementById('rateDateInput').value;
+      const inputVal=document.getElementById('rateDateInput').value;
       if(!inputVal){ selectedDateIndex=null; updateFreightTables(); updateMetrics(); return; }
-      const idx = findClosestIndex(new Date(inputVal));
-      if(idx===null) return;
-      selectedDateIndex = idx;
-      const actual = currentData.dates[idx];
-      document.getElementById('dateNearestHint').textContent =
-        `가장 가까운 데이터: ${ymd(actual)}`;
-      updateFreightTables();
-      updateMetrics();
+      const idx=findClosestIndex(new Date(inputVal)); if(idx===null) return;
+      selectedDateIndex=idx;
+      const actual=currentData.dates[idx];
+      document.getElementById('dateNearestHint').textContent=`가장 가까운 데이터: ${ymd(actual)}`;
+      updateFreightTables(); updateMetrics();
     }
     function stepSelectedDate(dir){
       if(!currentData.dates.length) return;
-      if(selectedDateIndex==null) selectedDateIndex = currentData.dates.length-1;
-      selectedDateIndex = Math.min(currentData.dates.length-1, Math.max(0, selectedDateIndex + dir));
-      const d = currentData.dates[selectedDateIndex];
-      document.getElementById('rateDateInput').value = ymd(d);
-      document.getElementById('dateNearestHint').textContent = '';
-      updateFreightTables();
-      updateMetrics();
+      if(selectedDateIndex==null) selectedDateIndex=currentData.dates.length-1;
+      selectedDateIndex=Math.min(currentData.dates.length-1, Math.max(0, selectedDateIndex+dir));
+      const d=currentData.dates[selectedDateIndex];
+      document.getElementById('rateDateInput').value=ymd(d);
+      document.getElementById('dateNearestHint').textContent='';
+      updateFreightTables(); updateMetrics();
     }
 
+    /* ====== 부팅 ====== */
     document.addEventListener('DOMContentLoaded', ()=>{
       document.getElementById('sheetLink').href = SHEET_URL;
 
       document.querySelectorAll('.time-btn').forEach(btn=>{
         btn.addEventListener('click', function(){
           document.querySelectorAll('.time-btn').forEach(b=>b.classList.remove('active'));
-          this.classList.add('active');
-          currentTimeRange = this.getAttribute('data-range');
+          this.classList.add('active'); currentTimeRange=this.getAttribute('data-range');
           updateMetrics(); updateCharts();
         });
       });
@@ -672,29 +620,26 @@
       document.getElementById('euSeaOriginSelect').addEventListener('change', updateEUSeaChart);
       document.getElementById('airOriginSelect').addEventListener('change', updateAirChart);
 
-      // 날짜 컨트롤 이벤트
       document.getElementById('dateApplyBtn').addEventListener('click', applySelectedDateFromInput);
       document.getElementById('rateDateInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter') applySelectedDateFromInput(); });
       document.getElementById('datePrevBtn').addEventListener('click', ()=>stepSelectedDate(-1));
       document.getElementById('dateNextBtn').addEventListener('click', ()=>stepSelectedDate(1));
 
-      loadDataFromGoogleSheets();
-      refreshTimer = setInterval(loadDataFromGoogleSheets, REFRESH_INTERVAL);
+      // 첫 로드
+      if(USE_CSV){ loadDataFromCSV(); refreshTimer=setInterval(loadDataFromCSV, REFRESH_INTERVAL); }
+      else       { loadDataFromGoogleSheets(); refreshTimer=setInterval(loadDataFromGoogleSheets, REFRESH_INTERVAL); }
     });
 
-    // 탭 비가시 시 자동 새로고침 일시 정지
+    // 백그라운드에서 자동 새로고침 일시 정지
     document.addEventListener('visibilitychange', ()=>{
-      if(document.hidden){
-        if(refreshTimer) clearInterval(refreshTimer);
-      }else{
-        loadDataFromGoogleSheets();
-        refreshTimer = setInterval(loadDataFromGoogleSheets, REFRESH_INTERVAL);
+      if(refreshTimer && document.hidden){ clearInterval(refreshTimer); refreshTimer=null; }
+      else if(!document.hidden){
+        if(USE_CSV){ loadDataFromCSV(); refreshTimer=setInterval(loadDataFromCSV, REFRESH_INTERVAL); }
+        else       { loadDataFromGoogleSheets(); refreshTimer=setInterval(loadDataFromGoogleSheets, REFRESH_INTERVAL); }
       }
     });
 
-    window.addEventListener('beforeunload', ()=>{
-      if(refreshTimer) clearInterval(refreshTimer);
-    });
+    window.addEventListener('beforeunload', ()=>{ if(refreshTimer) clearInterval(refreshTimer); });
   </script>
 </body>
 </html>
