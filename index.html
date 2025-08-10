@@ -658,6 +658,29 @@ window.handleGoogleSheetsData = function(result) {
     }
 };
 
+// JSONP 콜백 함수 추가
+window.handleGoogleSheetsData = function(result) {
+    try {
+        if (result.status === 'success' && result.data) {
+            parseSheetData(result.data);
+            updateAllUI();
+            updateSyncStatus('success', '동기화 완료');
+            
+            const now = new Date();
+            document.getElementById('updateTime').textContent = 
+                `마지막 업데이트: ${now.toLocaleString('ko-KR')}`;
+        } else {
+            throw new Error('데이터 로드 실패');
+        }
+    } catch (error) {
+        console.error('데이터 처리 오류:', error);
+        updateSyncStatus('error', '데이터 오류');
+        loadSampleData();
+    } finally {
+        showLoading(false);
+    }
+};
+
 async function loadDataFromGoogleSheets() {
     showLoading(true);
     updateSyncStatus('syncing', '데이터 동기화 중...');
