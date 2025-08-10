@@ -428,20 +428,17 @@
         }
         
         // ==================== 초기화 ====================
-        window.onload = function() {
-            console.log('페이지 로드 완료');
-            console.log('Apps Script URL:', WEB_APP_URL);
-            
-            if (WEB_APP_URL.includes('YOUR_ACTUAL_URL')) {
-                showError('Apps Script URL을 설정해주세요!');
-                updateStatus('error', 'URL 설정 필요');
-            } else {
-                loadData();
-                
-                // 5분마다 자동 새로고침
-                setInterval(loadData, 5 * 60 * 1000);
-            }
-        };
+      // ==================== 초기화 ====================
+window.onload = function() {
+    console.log('페이지 로드 완료');
+    console.log('Apps Script URL:', WEB_APP_URL);
+    
+    // URL 체크 제거 (이미 설정됨)
+    loadData();
+    
+    // 5분마다 자동 새로고침
+    setInterval(loadData, 5 * 60 * 1000);
+};
     </script>
 </body>
 </html>
