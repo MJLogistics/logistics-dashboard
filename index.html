@@ -4,9 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>MJL 아시아발 글로벌 물류 운임 대시보드</title>
+  <!-- Chart.js 추가 -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
-    /* ====== (스타일 원문 그대로 유지) ====== */
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:linear-gradient(135deg,#1e3c72 0%,#2a5298 100%);min-height:100vh;padding:20px}
     .dashboard{max-width:1920px;margin:0 auto;background:rgba(255,255,255,.98);border-radius:20px;padding:30px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
@@ -242,7 +243,7 @@
     /* ==================== 설정 ==================== */
     const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzMb5jrh7SpUdTaaKAMxw_ds22V9f5vdGWkunsmtOxeoKdrSqzTElqGsZ1v8EgPWMo/exec';
     const SHEET_URL   = 'https://docs.google.com/spreadsheets/d/1FST2PUn1-2cxLiv6igJ_ssCKAC9gaqvVv22j83UApts/edit';
-    const REFRESH_INTERVAL = 5 * 60 * 1000; // 5분
+    const REFRESH_INTERVAL = 5 * 60 * 1000;
 
     /* ==================== 전역 상태 ==================== */
     let currentData = initData();
@@ -265,7 +266,7 @@
       };
     }
 
-    /* ==================== JSONP 콜백 (Apps Script에서 호출) ==================== */
+    /* ==================== JSONP 콜백 ==================== */
     window.handleGoogleSheetsData = function(result){
       try{
         if(result && result.status==='success' && Array.isArray(result.data)){
@@ -315,10 +316,7 @@
 
     /* ==================== 데이터 파싱 ==================== */
     function parseSheetData(data){
-      // 첫 행 헤더 제거
-      const rows = data.slice(1);
-
-      // 상태 초기화
+      const rows = data.slice(1); // 헤더 제거
       currentData = initData();
 
       const origins = ['shanghai','hongkong','shenzhen','hanoi','hochiminh'];
@@ -333,7 +331,7 @@
         currentData.indices.HRCI.push(parseFloat(row[4])||0);
 
         let col = 5;
-        // 해상 5원산지 x 6목적지 = 30
+        // 해상
         origins.forEach(o=>{
           currentData.freight[o].sea.la.push(        parseFloat(row[col++])||0);
           currentData.freight[o].sea.longbeach.push( parseFloat(row[col++])||0);
@@ -342,7 +340,7 @@
           currentData.freight[o].sea.paradip.push(   parseFloat(row[col++])||0);
           currentData.freight[o].sea.jnpt.push(      parseFloat(row[col++])||0);
         });
-        // 항공 5원산지 x 6목적지 = 30
+        // 항공
         origins.forEach(o=>{
           currentData.freight[o].air.lax.push(parseFloat(row[col++])||0);
           currentData.freight[o].air.jfk.push(parseFloat(row[col++])||0);
@@ -356,7 +354,7 @@
       console.log(`데이터 로드 완료: ${currentData.dates.length}개 포인트`);
     }
 
-    /* ==================== 샘플 데이터 (안전장치) ==================== */
+    /* ==================== 샘플 데이터 ==================== */
     function loadSampleData(reset=false){
       if(reset) currentData = initData();
 
@@ -471,7 +469,7 @@
       airBody.innerHTML='';
       origins.forEach((o,i)=>{
         const a = currentData.freight[o].air;
-        row = document.createElement('tr');
+        const row = document.createElement('tr'); <!-- 여기 const로 수정 -->
         row.innerHTML = `
           <td style="font-weight:bold;">${names[i]}</td>
           <td>$${(a.lax[last]||0).toFixed(2)}</td>
