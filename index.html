@@ -87,16 +87,14 @@
       <div class="update-info">
         <span class="update-time" id="updateTime">마지막 업데이트: -</span>
         <span class="data-status">아시아(중국/베트남) → 북미/유럽/인도</span>
-        <span class="sync-status" id="syncStatus">
-          <span class="spinner"></span><span id="syncText">연결 중...</span>
-        </span>
+        <span class="sync-status" id="syncStatus"><span class="spinner"></span><span id="syncText">연결 중...</span></span>
       </div>
     </div>
 
     <div class="data-source-info">
       📊 <strong>실시간 데이터 연동</strong><br/>
       Google Sheets(Apps Script JSONP)로 자동 연동됩니다.<br/>
-      데이터 수정이 필요한 경우 <a href="https://docs.google.com/spreadsheets/d/1FST2PUn1-2cxLiv6igJ_ssCKAC9gaqvVv22j83UApts/edit?usp=drive_link" id="sheetLink" target="_blank">스프레드시트 열기</a>
+      데이터 수정이 필요한 경우 <a href="https://docs.google.com/spreadsheets/d/1FST2PUn1-2cxLiv6igJ_ssCKAC9gaqvVv22j83UApts/edit?usp=drive_link" target="_blank">스프레드시트 열기</a>
     </div>
 
     <div class="control-panel">
@@ -253,9 +251,8 @@
 
   <script>
     /* ===== 설정(Apps Script만 사용) ===== */
-    const USE_CSV   = false; // CSV 비활성
+    const USE_CSV = false; // CSV 비활성
     const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzMb5jrh7SpUdTaaKAMxw_ds22V9f5vdGWkunsmtOxeoKdrSqzTElqGsZ1v8EgPWMo/exec';
-    const SHEET_URL   = 'https://docs.google.com/spreadsheets/d/1FST2PUn1-2cxLiv6igJ_ssCKAC9gaqvVv22j83UApts/edit?usp=drive_link';
     const REFRESH_INTERVAL = 5 * 60 * 1000;
 
     /* ===== 상태 ===== */
@@ -366,10 +363,10 @@
           currentData.freight[o].air.blr.push(parseFloat(row[col++])||0);
         });
       });
-      if(skipped>0) console.warn(`[대시보드] 열 수 부족으로 스킵한 행: ${skipped}건 (각 행은 65열이어야 합니다)`);
+      if(skipped>0) console.warn(`[대시보드] 열 수 부족으로 스킵한 행: ${skipped}건`);
     }
 
-    /* ===== UI 업데이트 / 표 & 차트 ===== */
+    /* ===== UI 업데이트 ===== */
     function updateAllUI(){ updateMetrics(); updateFreightTables(); updateCharts(); }
     function safePctChange(curr, start){ if(!isFinite(curr)||!isFinite(start)||start===0) return null; return ((curr-start)/start*100); }
 
@@ -430,6 +427,7 @@
       });
     }
 
+    /* ===== 차트 ===== */
     function updateCharts(){ updateIndexChart(); updateUSSeaChart(); updateEUSeaChart(); updateAirChart(); }
     function monthLabels(fromIdx){ return currentData.dates.slice(fromIdx).map(d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`); }
     function destroyIfExists(key){ if(charts[key]){ charts[key].destroy(); charts[key]=null; } }
@@ -542,6 +540,10 @@
       document.getElementById('usSeaOriginSelect').addEventListener('change', updateUSSeaChart);
       document.getElementById('euSeaOriginSelect').addEventListener('change', updateEUSeaChart);
       document.getElementById('airOriginSelect').addEventListener('change', updateAirChart);
+
+      document.getElementById('dateApplyBtn').addEventListener('click', applySelectedDateFromInput);
+      document.getElementById('datePrevBtn').addEventListener('click', ()=>stepSelectedDate(-1));
+      document.getElementById('dateNextBtn').addEventListener('click', ()=>stepSelectedDate(1));
 
       loadDataFromGoogleSheets();
       refreshTimer = setInterval(loadDataFromGoogleSheets, REFRESH_INTERVAL);
