@@ -636,6 +636,7 @@
         
         // ==================== 데이터 로드 함수 ====================
         // JSONP 콜백 함수
+// JSONP 콜백 함수
 window.handleGoogleSheetsData = function(result) {
     try {
         if (result.status === 'success' && result.data) {
@@ -656,6 +657,39 @@ window.handleGoogleSheetsData = function(result) {
     } finally {
         showLoading(false);
     }
+}; // 세미콜론 확인!
+
+// loadDataFromGoogleSheets 함수
+async function loadDataFromGoogleSheets() {
+    showLoading(true);
+    updateSyncStatus('syncing', '데이터 동기화 중...');
+    
+    try {
+        // 기존 JSONP 스크립트 제거
+        const oldScript = document.getElementById('sheets-data-script');
+        if (oldScript) {
+            oldScript.remove();
+        }
+        
+        // JSONP 방식으로 데이터 로드
+        const script = document.createElement('script');
+        script.id = 'sheets-data-script';
+        script.src = WEB_APP_URL + '?callback=handleGoogleSheetsData';
+        script.onerror = function() {
+            console.error('스크립트 로드 실패');
+            updateSyncStatus('error', '연결 실패');
+            loadSampleData();
+            showLoading(false);
+        };
+        document.body.appendChild(script);
+        
+    } catch (error) {
+        console.error('데이터 로드 오류:', error);
+        updateSyncStatus('error', '연결 오류');
+        loadSampleData();
+        showLoading(false);
+    }
+}
 };
 
 // JSONP 콜백 함수 추가
