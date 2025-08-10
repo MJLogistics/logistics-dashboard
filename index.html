@@ -3,17 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>MJL 아시아발 글로벌 물류 운임 대시보드</title>
+    
+    <!-- 외부 라이브러리는 CDN으로만 사용 (인터넷 연결 필요) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- Firebase SDK -->
+    
+    <!-- Firebase SDK (선택사항 - 실시간 동기화 필요시) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    
+    <!-- 모든 스타일을 인라인으로 포함 -->
     <style>
+        /* ===== 전역 리셋 및 기본 스타일 ===== */
         * {
             margin: 0;
-            padding: 
+            padding: 0;
             box-sizing: border-box;
         }
         
@@ -22,8 +28,10 @@
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             min-height: 100vh;
             padding: 20px;
+            line-height: 1.6;
         }
         
+        /* ===== 메인 대시보드 컨테이너 ===== */
         .dashboard {
             max-width: 1920px;
             margin: 0 auto;
@@ -33,6 +41,7 @@
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
         }
         
+        /* ===== 헤더 영역 ===== */
         .header {
             text-align: center;
             margin-bottom: 30px;
@@ -78,6 +87,7 @@
             font-size: 0.85em;
         }
         
+        /* ===== 컨트롤 패널 ===== */
         .control-panel {
             background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
             padding: 25px;
@@ -107,6 +117,7 @@
             gap: 20px;
         }
         
+        /* ===== 업로드 영역 ===== */
         .upload-area {
             border: 2px dashed #e74c3c;
             border-radius: 10px;
@@ -152,6 +163,7 @@
             pointer-events: none;
         }
         
+        /* ===== 시간 범위 버튼 ===== */
         .time-range-buttons {
             display: flex;
             gap: 8px;
@@ -168,6 +180,7 @@
             cursor: pointer;
             font-weight: 600;
             transition: all 0.3s;
+            font-size: 0.9em;
         }
         
         .time-btn.active {
@@ -180,6 +193,7 @@
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
         
+        /* ===== 메트릭스 그리드 ===== */
         .metrics-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -238,6 +252,7 @@
             background: rgba(231, 76, 60, 0.1);
         }
         
+        /* ===== 운임 테이블 ===== */
         .freight-table {
             background: white;
             border-radius: 15px;
@@ -253,7 +268,8 @@
             font-size: 0.9em;
         }
         
-        .freight-table th, .freight-table td {
+        .freight-table th, 
+        .freight-table td {
             padding: 10px 8px;
             text-align: center;
             border: 1px solid #e0e0e0;
@@ -279,6 +295,7 @@
             font-size: 0.85em;
         }
         
+        /* ===== 차트 컨테이너 ===== */
         .chart-container {
             background: white;
             border-radius: 15px;
@@ -307,6 +324,7 @@
             width: 100%;
         }
         
+        /* ===== 버튼 스타일 ===== */
         .download-btn {
             background: #2ecc71;
             margin-top: 15px;
@@ -316,6 +334,7 @@
             border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
+            font-size: 0.9em;
         }
         
         .download-btn:hover {
@@ -340,6 +359,7 @@
             text-align: center;
         }
         
+        /* ===== 탭 스타일 ===== */
         .tabs {
             display: flex;
             gap: 10px;
@@ -356,6 +376,7 @@
             font-weight: 600;
             position: relative;
             transition: all 0.3s;
+            font-size: 0.95em;
         }
         
         .tab.active {
@@ -380,6 +401,7 @@
             display: block;
         }
         
+        /* ===== 셀렉터 스타일 ===== */
         .origin-selector {
             margin-bottom: 15px;
         }
@@ -393,6 +415,7 @@
             cursor: pointer;
         }
         
+        /* ===== 날짜 업데이트 섹션 ===== */
         .date-update-section {
             display: flex;
             justify-content: flex-end;
@@ -401,7 +424,8 @@
             gap: 10px;
         }
         
-        .date-input {
+        .date-input,
+        #dateSelector {
             padding: 5px 10px;
             border: 2px solid #3498db;
             border-radius: 5px;
@@ -423,46 +447,116 @@
             background: #2980b9;
         }
         
+        /* ===== 관리자 모드 버튼 ===== */
+        #adminToggle {
+            padding: 8px 15px;
+            background: #95a5a6;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.85em;
+            margin-top: 15px;
+        }
+        
+        #adminToggle:hover {
+            background: #7f8c8d;
+        }
+        
+        /* ===== 반응형 디자인 ===== */
         @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .dashboard {
+                padding: 20px;
+                border-radius: 15px;
+            }
+            
+            h1 {
+                font-size: 1.8em;
+            }
+            
             .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .metrics-grid {
                 grid-template-columns: 1fr;
             }
             
             .freight-table {
                 font-size: 0.8em;
+                padding: 15px;
             }
             
-            .freight-table th, .freight-table td {
+            .freight-table th, 
+            .freight-table td {
                 padding: 6px 4px;
+                font-size: 0.85em;
+            }
+            
+            .control-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .time-range-buttons {
+                justify-content: center;
+            }
+            
+            .chart-canvas {
+                height: 300px;
+            }
+        }
+        
+        /* ===== 프린트 스타일 ===== */
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            
+            .dashboard {
+                box-shadow: none;
+                padding: 20px;
+            }
+            
+            .control-panel {
+                display: none;
             }
         }
     </style>
 </head>
 <body>
     <div class="dashboard">
+        <!-- 헤더 -->
         <div class="header">
             <h1>🚢 ✈️ MJL 아시아발 글로벌 물류 운임 대시보드</h1>
             <div class="subtitle">MJ LOGISTICS GLOBAL FREIGHT RATE DASHBOARD</div>
             <div class="update-info">
-                <span class="update-time" id="updateTime">마지막 업데이트: 2025년 1월 21일 14:30</span>
+                <span class="update-time" id="updateTime">마지막 업데이트: 로딩중...</span>
                 <span class="data-status">아시아(중국/베트남) → 북미/유럽/인도</span>
                 <span style="background: #f39c12; color: white; padding: 3px 10px; border-radius: 15px; font-size: 0.85em;">Weekly Update</span>
             </div>
         </div>
 
+        <!-- 데이터 상태 알림 -->
         <div class="demo-notice" id="dataStatus">
             📊 해운 지수 및 운임 데이터 
-            <span style="background: #e74c3c; color: white; padding: 2px 8px; border-radius: 5px; font-weight: 600;" id="statusDate">2025년 1월 21일 기준</span>
-            <br><span id="statusIndices">• BDI: 1,140 | SCFI: 984.73 | CCFI: 962.64 | HRCI: 635.6</span>
+            <span style="background: #e74c3c; color: white; padding: 2px 8px; border-radius: 5px; font-weight: 600;" id="statusDate">날짜 로딩중...</span>
+            <br><span id="statusIndices">지수 데이터 로딩중...</span>
             <br>• 출발지: 상해, 홍콩, 심천, 하노이, 호치민
             <br>• 도착지: 북미(LA, 롱비치), 유럽(로테르담), 인도(Kandla, Paradip, JNPT)
             <br><span style="color: #e74c3c; font-weight: 600;">⚠️ 운임은 주간 단위로 변동되며, 성수기/유가/시장 상황에 따라 ±10~30% 변동 가능</span>
         </div>
 
+        <!-- 컨트롤 패널 -->
         <div class="control-panel">
             <div class="control-section">
-                <div class="control-title">📂 데이터 업로드 및 관리</div>
+                <div class="control-title">📂 데이터 관리 및 시간 범위 설정</div>
                 <div class="control-grid">
+                    <!-- 데이터 업로드 섹션 -->
                     <div>
                         <div id="adminSection" style="display: none;">
                             <div class="upload-area" id="uploadArea">
@@ -477,27 +571,19 @@
                         <div id="userSection">
                             <div style="background: #e8f4f8; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
                                 <div style="font-weight: 600; color: #2c3e50; margin-bottom: 8px;">
-                                    🔄 실시간 데이터 동기화
+                                    🔄 데이터 현황
                                 </div>
                                 <div style="color: #7f8c8d; font-size: 0.9em;" id="syncStatus">
-                                    데이터가 자동으로 업데이트됩니다
-                                </div>
-                                <div style="margin-top: 10px;">
-                                    <span id="lastSyncTime" style="font-size: 0.85em; color: #95a5a6;">
-                                        마지막 동기화: -
-                                    </span>
+                                    샘플 데이터로 실행 중
                                 </div>
                             </div>
                             <button class="download-btn" id="downloadBtnUser">📥 현재 데이터 CSV 다운로드</button>
                         </div>
                         
-                        <div style="margin-top: 15px;">
-                            <button id="adminToggle" style="padding: 8px 15px; background: #95a5a6; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 0.85em;">
-                                🔐 관리자 모드
-                            </button>
-                        </div>
+                        <button id="adminToggle">🔐 관리자 모드</button>
                     </div>
                     
+                    <!-- 시간 범위 선택 -->
                     <div>
                         <div style="margin-bottom: 10px; font-weight: 600;">시간 범위 선택</div>
                         <div class="time-range-buttons">
@@ -514,35 +600,37 @@
             </div>
         </div>
 
+        <!-- 메트릭스 카드 -->
         <div class="metrics-grid" id="metricsGrid">
             <div class="metric-card">
                 <div class="metric-title">발틱운임지수 (BDI)</div>
-                <div class="metric-value">1,140</div>
-                <span class="metric-change negative">▼ 42.5%</span>
+                <div class="metric-value">-</div>
+                <span class="metric-change negative">계산중...</span>
             </div>
             <div class="metric-card">
                 <div class="metric-title">상해컨테이너운임지수 (SCFI)</div>
-                <div class="metric-value">984.73</div>
-                <span class="metric-change negative">▼ 18.2%</span>
+                <div class="metric-value">-</div>
+                <span class="metric-change negative">계산중...</span>
             </div>
             <div class="metric-card">
                 <div class="metric-title">중국컨테이너운임지수 (CCFI)</div>
-                <div class="metric-value">962.64</div>
-                <span class="metric-change negative">▼ 15.7%</span>
+                <div class="metric-value">-</div>
+                <span class="metric-change negative">계산중...</span>
             </div>
             <div class="metric-card">
                 <div class="metric-title">HRCI 지수</div>
-                <div class="metric-value">635.6</div>
-                <span class="metric-change negative">▼ 8.3%</span>
+                <div class="metric-value">-</div>
+                <span class="metric-change negative">계산중...</span>
             </div>
         </div>
 
+        <!-- 운임 테이블 -->
         <div class="freight-table">
-            <h3 class="chart-title">📊 운임 현황 <span id="rateDate" style="color: #e74c3c; font-size: 0.9em;">(2025년 1월 21일 기준)</span></h3>
+            <h3 class="chart-title">📊 운임 현황 <span id="rateDate" style="color: #e74c3c; font-size: 0.9em;">(날짜 로딩중)</span></h3>
             <div class="date-update-section">
                 <label style="margin-right: 10px;">날짜 선택: </label>
-                <select id="dateSelector" style="padding: 5px 10px; border: 2px solid #3498db; border-radius: 5px; margin-right: 10px;">
-                    <!-- 날짜 옵션이 동적으로 추가됨 -->
+                <select id="dateSelector">
+                    <option>데이터 로딩중...</option>
                 </select>
                 <button id="updateDateBtn" class="update-date-btn">🔄 오늘 날짜로 업데이트</button>
             </div>
@@ -552,6 +640,7 @@
                 <button class="tab" onclick="switchTab('air')">✈️ 항공 운임</button>
             </div>
             
+            <!-- 해상 운임 탭 -->
             <div id="seaTab" class="tab-content active">
                 <table>
                     <thead>
@@ -573,56 +662,13 @@
                             <th colspan="6" style="font-size: 0.8em; background: #7f8c8d;">단위: USD/TEU</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <tr>
-                            <td style="font-weight: bold;">🇨🇳 상해</td>
-                            <td>$1,628</td>
-                            <td>$1,642</td>
-                            <td>$3,542</td>
-                            <td>$895</td>
-                            <td>$912</td>
-                            <td>$925</td>
-                        </tr>
-                        <tr>
-                            <td style="font-weight: bold;">🇭🇰 홍콩</td>
-                            <td>$1,685</td>
-                            <td>$1,698</td>
-                            <td>$3,625</td>
-                            <td>$928</td>
-                            <td>$945</td>
-                            <td>$958</td>
-                        </tr>
-                        <tr>
-                            <td style="font-weight: bold;">🇨🇳 심천</td>
-                            <td>$1,658</td>
-                            <td>$1,672</td>
-                            <td>$3,585</td>
-                            <td>$915</td>
-                            <td>$932</td>
-                            <td>$945</td>
-                        </tr>
-                        <tr>
-                            <td style="font-weight: bold;">🇻🇳 하노이</td>
-                            <td>$1,542</td>
-                            <td>$1,558</td>
-                            <td>$3,385</td>
-                            <td>$842</td>
-                            <td>$858</td>
-                            <td>$872</td>
-                        </tr>
-                        <tr>
-                            <td style="font-weight: bold;">🇻🇳 호치민</td>
-                            <td>$1,485</td>
-                            <td>$1,498</td>
-                            <td>$3,285</td>
-                            <td>$812</td>
-                            <td>$828</td>
-                            <td>$842</td>
-                        </tr>
+                    <tbody id="seaTableBody">
+                        <tr><td colspan="7">데이터 로딩중...</td></tr>
                     </tbody>
                 </table>
             </div>
             
+            <!-- 항공 운임 탭 -->
             <div id="airTab" class="tab-content">
                 <table>
                     <thead>
@@ -644,70 +690,17 @@
                             <th colspan="6" style="font-size: 0.8em; background: #7f8c8d;">단위: USD/kg</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <tr>
-                            <td style="font-weight: bold;">🇨🇳 상해</td>
-                            <td>$4.85</td>
-                            <td>$5.12</td>
-                            <td>$3.92</td>
-                            <td>$2.78</td>
-                            <td>$2.85</td>
-                            <td>$2.92</td>
-                        </tr>
-                        <tr>
-                            <td style="font-weight: bold;">🇭🇰 홍콩</td>
-                            <td>$5.12</td>
-                            <td>$5.38</td>
-                            <td>$4.15</td>
-                            <td>$2.95</td>
-                            <td>$3.02</td>
-                            <td>$3.08</td>
-                        </tr>
-                        <tr>
-                            <td style="font-weight: bold;">🇨🇳 심천</td>
-                            <td>$5.02</td>
-                            <td>$5.28</td>
-                            <td>$4.05</td>
-                            <td>$2.88</td>
-                            <td>$2.95</td>
-                            <td>$3.02</td>
-                        </tr>
-                        <tr>
-                            <td style="font-weight: bold;">🇻🇳 하노이</td>
-                            <td>$4.65</td>
-                            <td>$4.92</td>
-                            <td>$3.78</td>
-                            <td>$2.48</td>
-                            <td>$2.55</td>
-                            <td>$2.62</td>
-                        </tr>
-                        <tr>
-                            <td style="font-weight: bold;">🇻🇳 호치민</td>
-                            <td>$4.45</td>
-                            <td>$4.72</td>
-                            <td>$3.58</td>
-                            <td>$2.28</td>
-                            <td>$2.35</td>
-                            <td>$2.42</td>
-                        </tr>
+                    <tbody id="airTableBody">
+                        <tr><td colspan="7">데이터 로딩중...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <!-- 운임 변동 분석 섹션 -->
-        <div id="freightAnalysis" style="background: #f8f9fa; padding: 20px; border-radius: 15px; margin: 20px 0; display: none;">
-            <h3 style="color: #2c3e50; margin-bottom: 15px; font-size: 1.3em;">
-                📈 운임 변동 분석 <span id="analysisDateRange" style="color: #7f8c8d; font-size: 0.9em;"></span>
-            </h3>
-            <div id="analysisContent" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
-                <!-- 동적으로 생성될 분석 내용 -->
-            </div>
-        </div>
-
+        <!-- 차트 그리드 -->
         <div class="charts-grid">
             <div class="chart-container">
-                <h3 class="chart-title">📈 해운 지수 추이 <span id="indexChartPeriod" style="color: #7f8c8d; font-size: 0.9em;"></span></h3>
+                <h3 class="chart-title">📈 해운 지수 추이</h3>
                 <div class="chart-canvas">
                     <canvas id="indexChart"></canvas>
                 </div>
@@ -717,7 +710,7 @@
                 <h3 class="chart-title">🚢 북미 해상 운임 비교</h3>
                 <div class="origin-selector">
                     <label>출발지: </label>
-                    <select id="usSeaOriginSelect" onchange="updateUSSeaChart(currentTimeRange)">
+                    <select id="usSeaOriginSelect">
                         <option value="all">전체</option>
                         <option value="shanghai">상해</option>
                         <option value="hongkong">홍콩</option>
@@ -731,253 +724,16 @@
                 </div>
             </div>
         </div>
-
-        <div class="charts-grid">
-            <div class="chart-container">
-                <h3 class="chart-title">🚢 유럽 해상 운임 비교</h3>
-                <div class="origin-selector">
-                    <label>출발지: </label>
-                    <select id="euSeaOriginSelect" onchange="updateEUSeaChart(currentTimeRange)">
-                        <option value="all">전체</option>
-                        <option value="shanghai">상해</option>
-                        <option value="hongkong">홍콩</option>
-                        <option value="shenzhen">심천</option>
-                        <option value="hanoi">하노이</option>
-                        <option value="hochiminh">호치민</option>
-                    </select>
-                </div>
-                <div class="chart-canvas">
-                    <canvas id="euSeaChart"></canvas>
-                </div>
-            </div>
-            
-            <div class="chart-container">
-                <h3 class="chart-title">🚢 인도 해상 운임 비교</h3>
-                <div class="origin-selector">
-                    <label>출발지: </label>
-                    <select id="indiaSeaOriginSelect" onchange="updateIndiaSeaChart(currentTimeRange)">
-                        <option value="all">전체</option>
-                        <option value="shanghai">상해</option>
-                        <option value="hongkong">홍콩</option>
-                        <option value="shenzhen">심천</option>
-                        <option value="hanoi">하노이</option>
-                        <option value="hochiminh">호치민</option>
-                    </select>
-                </div>
-                <div class="chart-canvas">
-                    <canvas id="indiaSeaChart"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <div class="charts-grid">
-            <div class="chart-container">
-                <h3 class="chart-title">✈️ 북미 항공 운임 비교</h3>
-                <div class="origin-selector">
-                    <label>출발지: </label>
-                    <select id="usAirOriginSelect" onchange="updateUSAirChart(currentTimeRange)">
-                        <option value="all">전체</option>
-                        <option value="shanghai">상해</option>
-                        <option value="hongkong">홍콩</option>
-                        <option value="shenzhen">심천</option>
-                        <option value="hanoi">하노이</option>
-                        <option value="hochiminh">호치민</option>
-                    </select>
-                </div>
-                <div class="chart-canvas">
-                    <canvas id="usAirChart"></canvas>
-                </div>
-            </div>
-            
-            <div class="chart-container">
-                <h3 class="chart-title">✈️ 인도 항공 운임 비교</h3>
-                <div class="origin-selector">
-                    <label>출발지: </label>
-                    <select id="indiaAirOriginSelect" onchange="updateIndiaAirChart(currentTimeRange)">
-                        <option value="all">전체</option>
-                        <option value="shanghai">상해</option>
-                        <option value="hongkong">홍콩</option>
-                        <option value="shenzhen">심천</option>
-                        <option value="hanoi">하노이</option>
-                        <option value="hochiminh">호치민</option>
-                    </select>
-                </div>
-                <div class="chart-canvas">
-                    <canvas id="indiaAirChart"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <div style="background: white; padding: 20px; border-radius: 15px; margin: 30px 0;">
-            <h3 style="color: #2c3e50; margin-bottom: 15px;">📋 데이터 파일 형식 가이드</h3>
-            <p style="color: #7f8c8d; margin-bottom: 10px;">Excel 또는 CSV 파일에 다음 순서로 컬럼을 작성하세요:</p>
-            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.85em;">
-                <strong>기본 정보:</strong> 날짜, BDI, SCFI, CCFI, HRCI<br><br>
-                <strong>해상 운임 (USD/TEU):</strong><br>
-                • 상해: LA, 롱비치, 로테르담, Kandla, Paradip, JNPT<br>
-                • 홍콩: LA, 롱비치, 로테르담, Kandla, Paradip, JNPT<br>
-                • 심천: LA, 롱비치, 로테르담, Kandla, Paradip, JNPT<br>
-                • 하노이: LA, 롱비치, 로테르담, Kandla, Paradip, JNPT<br>
-                • 호치민: LA, 롱비치, 로테르담, Kandla, Paradip, JNPT<br><br>
-                <strong>항공 운임 (USD/kg):</strong><br>
-                • 상해: LAX, JFK, VIE, DEL, BOM, BLR<br>
-                • 홍콩: LAX, JFK, VIE, DEL, BOM, BLR<br>
-                • 심천: LAX, JFK, VIE, DEL, BOM, BLR<br>
-                • 하노이: LAX, JFK, VIE, DEL, BOM, BLR<br>
-                • 호치민: LAX, JFK, VIE, DEL, BOM, BLR<br><br>
-                <strong>총 65개 컬럼 (5개 출발지 × 12개 도착지 + 5개 기본정보)</strong>
-            </div>
-        </div>
     </div>
 
+    <!-- 모든 JavaScript를 인라인으로 포함 -->
     <script>
-        // Firebase 설정 (실제 사용 시 본인의 Firebase 프로젝트 정보로 교체 필요)
-        const firebaseConfig = {
-    apiKey: "AIzaSyDxxxxxxxxxxxxxxxxxxxxxxx",
-    authDomain: "mjl-dashboard.firebaseapp.com",
-    databaseURL: "https://global-freight-rate-dashboard-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "mjl-dashboard",
-    storageBucket: "mjl-dashboard.appspot.com",
-    messagingSenderId: "123456789012",
-    appId: "1:123456789012:web:xxxxxxxxxxxxx"
-};
-        
-        // Firebase 초기화 체크
-        let firebaseEnabled = false;
-        let database = null;
+        // ===== 전역 변수 =====
+        let currentTimeRange = '1Y';
+        let charts = {};
         let isAdmin = false;
         
-        // Firebase 초기화 시도
-        try {
-            if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
-                firebase.initializeApp(firebaseConfig);
-                database = firebase.database();
-                firebaseEnabled = true;
-                console.log('Firebase 연결 성공');
-                
-                // 실시간 데이터 리스너 설정
-                setupRealtimeListener();
-            } else {
-                console.log('Firebase 설정 필요 - 로컬 모드로 실행');
-                document.getElementById('syncStatus').textContent = '로컬 모드 - Firebase 설정 필요';
-                document.getElementById('syncStatus').style.color = '#e74c3c';
-            }
-        } catch (error) {
-            console.error('Firebase 초기화 실패:', error);
-            firebaseEnabled = false;
-        }
-        
-        // 실시간 데이터 리스너
-        function setupRealtimeListener() {
-            if (!database) return;
-            
-            const dataRef = database.ref('freightData/latest');
-            
-            dataRef.on('value', (snapshot) => {
-                const data = snapshot.val();
-                if (data && data.data) {
-                    console.log('실시간 데이터 수신');
-                    
-                    // 받은 데이터를 currentData에 적용
-                    if (data.data.dates && data.data.indices && data.data.freight) {
-                        // 날짜 문자열을 Date 객체로 변환
-                        currentData.dates = data.data.dates.map(d => new Date(d));
-                        currentData.indices = data.data.indices;
-                        currentData.freight = data.data.freight;
-                        
-                        // UI 업데이트
-                        updateUIWithData();
-                        
-                        // 동기화 상태 업데이트
-                        const syncTime = new Date(data.timestamp);
-                        document.getElementById('lastSyncTime').textContent = 
-                            `마지막 동기화: ${syncTime.toLocaleString('ko-KR')}`;
-                        document.getElementById('syncStatus').textContent = '✅ 데이터 동기화 완료';
-                        document.getElementById('syncStatus').style.color = '#27ae60';
-                    }
-                }
-            });
-            
-            dataRef.on('child_changed', () => {
-                console.log('데이터 변경 감지');
-                document.getElementById('syncStatus').textContent = '🔄 데이터 업데이트 중...';
-                document.getElementById('syncStatus').style.color = '#f39c12';
-            });
-        }
-        
-        // 데이터를 Firebase에 업로드
-        function uploadDataToFirebase() {
-            if (!database || !isAdmin) {
-                alert('관리자 권한이 필요합니다.');
-                return;
-            }
-            
-            const dataToUpload = {
-                data: currentData,
-                timestamp: Date.now(),
-                uploadedBy: 'admin',
-                version: '1.0'
-            };
-            
-            database.ref('freightData/latest').set(dataToUpload)
-                .then(() => {
-                    console.log('데이터 업로드 성공');
-                    alert('데이터가 성공적으로 업로드되었습니다. 모든 사용자에게 반영됩니다.');
-                })
-                .catch((error) => {
-                    console.error('데이터 업로드 실패:', error);
-                    alert('데이터 업로드 실패: ' + error.message);
-                });
-        }
-        
-        // UI 업데이트 함수
-        function updateUIWithData() {
-            if (currentData.dates.length > 0) {
-                const lastIdx = currentData.dates.length - 1;
-                
-                // 메트릭스 업데이트
-                updateMetricsForTimeRange(currentTimeRange);
-                
-                // 운임 테이블 업데이트
-                updateFreightTables(lastIdx);
-                
-                // 날짜 선택기 업데이트
-                updateDateSelector();
-                
-                // 상단 데이터 상태 업데이트
-                updateDataStatus(lastIdx);
-                
-                // 차트 업데이트
-                updateCharts(currentTimeRange);
-                
-                // 분석 업데이트
-                analyzeFreightChanges(currentTimeRange);
-            }
-        }
-        
-        // 관리자 모드 토글
-        document.getElementById('adminToggle').addEventListener('click', function() {
-            const password = prompt('관리자 비밀번호를 입력하세요:');
-            
-            // 간단한 비밀번호 체크 (실제 운영 시 서버 인증 필요)
-            if (password === 'mjl2025admin') {
-                isAdmin = true;
-                document.getElementById('adminSection').style.display = 'block';
-                document.getElementById('userSection').style.display = 'none';
-                this.textContent = '👤 사용자 모드';
-                this.style.background = '#e74c3c';
-                alert('관리자 모드가 활성화되었습니다.');
-            } else if (isAdmin) {
-                isAdmin = false;
-                document.getElementById('adminSection').style.display = 'none';
-                document.getElementById('userSection').style.display = 'block';
-                this.textContent = '🔐 관리자 모드';
-                this.style.background = '#95a5a6';
-            } else {
-                alert('비밀번호가 올바르지 않습니다.');
-            }
-        });
-        // 전역 데이터 객체
+        // 데이터 구조
         const currentData = {
             dates: [],
             indices: {
@@ -1010,202 +766,11 @@
             }
         };
 
-        // 차트 인스턴스
-        let charts = {};
-
-        // 탭 전환 함수
-        function switchTab(tabName) {
-            const tabs = document.querySelectorAll('.tab');
-            const contents = document.querySelectorAll('.tab-content');
-            
-            tabs.forEach(tab => tab.classList.remove('active'));
-            contents.forEach(content => content.classList.remove('active'));
-            
-            if (tabName === 'sea') {
-                tabs[0].classList.add('active');
-                document.getElementById('seaTab').classList.add('active');
-            } else {
-                tabs[1].classList.add('active');
-                document.getElementById('airTab').classList.add('active');
-            }
-        }
-
-        // 날짜 업데이트 함수
-        function updateRateDate() {
-            const rateDate = document.getElementById('rateDate');
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = today.getMonth() + 1;
-            const day = today.getDate();
-            
-            rateDate.textContent = `(${year}년 ${month}월 ${day}일 기준)`;
-            
-            // 최신 데이터로 메트릭스 업데이트
-            if (currentData.dates.length > 0) {
-                const lastIdx = currentData.dates.length - 1;
-                updateMetricsForTimeRange(currentTimeRange);
-                updateFreightTables(lastIdx);
-                
-                // 날짜 선택기를 최신 날짜로 설정
-                const dateSelector = document.getElementById('dateSelector');
-                if (dateSelector) {
-                    dateSelector.value = lastIdx;
-                }
-            }
-        }
-        
-        // 날짜 선택기 업데이트
-        function updateDateSelector() {
-            const dateSelector = document.getElementById('dateSelector');
-            if (!dateSelector) return;
-            
-            dateSelector.innerHTML = '';
-            
-            if (currentData.dates.length > 0) {
-                // 날짜를 역순으로 추가 (최신 날짜가 먼저)
-                for (let i = currentData.dates.length - 1; i >= 0; i--) {
-                    const date = currentData.dates[i];
-                    const option = document.createElement('option');
-                    option.value = i;
-                    option.textContent = `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
-                    dateSelector.appendChild(option);
-                }
-                
-                // 날짜 선택 이벤트 리스너
-                dateSelector.addEventListener('change', function() {
-                    const selectedIdx = parseInt(this.value);
-                    updateFreightTables(selectedIdx);
-                    
-                    // 선택된 날짜로 제목 업데이트
-                    const selectedDate = currentData.dates[selectedIdx];
-                    const rateDate = document.getElementById('rateDate');
-                    rateDate.textContent = `(${selectedDate.getFullYear()}년 ${selectedDate.getMonth() + 1}월 ${selectedDate.getDate()}일 기준)`;
-                });
-            }
-        }
-        
-        // 시간 범위에 따른 메트릭스 업데이트
-        function updateMetricsForTimeRange(timeRange) {
-            if (currentData.dates.length === 0) return;
-            
-            // 시간 범위에 따른 데이터 포인트 결정
-            let startIdx = 0;
-            const endIdx = currentData.dates.length - 1;
-            
-            // 주간 데이터 기준으로 인덱스 계산
-            switch(timeRange) {
-                case '2W':
-                    // 2주
-                    startIdx = Math.max(0, endIdx - 2);
-                    break;
-                case '1M':
-                    // 1개월 = 약 4주
-                    startIdx = Math.max(0, endIdx - 4);
-                    break;
-                case '3M':
-                    // 3개월 = 약 13주
-                    startIdx = Math.max(0, endIdx - 13);
-                    break;
-                case '6M':
-                    // 6개월 = 약 26주
-                    startIdx = Math.max(0, endIdx - 26);
-                    break;
-                case '1Y':
-                    // 1년 = 약 52주
-                    startIdx = Math.max(0, endIdx - 52);
-                    break;
-                case '2Y':
-                    // 2년 = 약 104주
-                    startIdx = Math.max(0, endIdx - 104);
-                    break;
-                case 'Max':
-                    startIdx = 0;
-                    break;
-            }
-            
-            console.log(`시간 범위: ${timeRange}, 시작 인덱스: ${startIdx}, 종료 인덱스: ${endIdx}`);
-            console.log(`전체 데이터 포인트: ${currentData.dates.length}개`);
-            
-            // 시작과 끝 값으로 변동률 계산
-            const bdiStart = currentData.indices.BDI[startIdx];
-            const bdiEnd = currentData.indices.BDI[endIdx];
-            const bdiChange = bdiStart ? ((bdiEnd - bdiStart) / bdiStart * 100).toFixed(1) : 0;
-            
-            const scfiStart = currentData.indices.SCFI[startIdx];
-            const scfiEnd = currentData.indices.SCFI[endIdx];
-            const scfiChange = scfiStart ? ((scfiEnd - scfiStart) / scfiStart * 100).toFixed(1) : 0;
-            
-            const ccfiStart = currentData.indices.CCFI[startIdx];
-            const ccfiEnd = currentData.indices.CCFI[endIdx];
-            const ccfiChange = ccfiStart ? ((ccfiEnd - ccfiStart) / ccfiStart * 100).toFixed(1) : 0;
-            
-            const hrciStart = currentData.indices.HRCI[startIdx];
-            const hrciEnd = currentData.indices.HRCI[endIdx];
-            const hrciChange = hrciStart ? ((hrciEnd - hrciStart) / hrciStart * 100).toFixed(1) : 0;
-            
-            console.log(`BDI: ${bdiStart} → ${bdiEnd} (${bdiChange}%)`);
-            console.log(`SCFI: ${scfiStart} → ${scfiEnd} (${scfiChange}%)`);
-            
-            // 메트릭스 카드 업데이트
-            document.querySelector('.metric-card:nth-child(1) .metric-value').textContent = bdiEnd ? bdiEnd.toLocaleString() : '0';
-            const bdiChangeEl = document.querySelector('.metric-card:nth-child(1) .metric-change');
-            bdiChangeEl.textContent = `${parseFloat(bdiChange) > 0 ? '▲' : '▼'} ${Math.abs(parseFloat(bdiChange))}%`;
-            bdiChangeEl.className = `metric-change ${parseFloat(bdiChange) > 0 ? 'positive' : 'negative'}`;
-            
-            document.querySelector('.metric-card:nth-child(2) .metric-value').textContent = scfiEnd ? scfiEnd.toFixed(2) : '0.00';
-            const scfiChangeEl = document.querySelector('.metric-card:nth-child(2) .metric-change');
-            scfiChangeEl.textContent = `${parseFloat(scfiChange) > 0 ? '▲' : '▼'} ${Math.abs(parseFloat(scfiChange))}%`;
-            scfiChangeEl.className = `metric-change ${parseFloat(scfiChange) > 0 ? 'positive' : 'negative'}`;
-            
-            document.querySelector('.metric-card:nth-child(3) .metric-value').textContent = ccfiEnd ? ccfiEnd.toFixed(2) : '0.00';
-            const ccfiChangeEl = document.querySelector('.metric-card:nth-child(3) .metric-change');
-            ccfiChangeEl.textContent = `${parseFloat(ccfiChange) > 0 ? '▲' : '▼'} ${Math.abs(parseFloat(ccfiChange))}%`;
-            ccfiChangeEl.className = `metric-change ${parseFloat(ccfiChange) > 0 ? 'positive' : 'negative'}`;
-            
-            document.querySelector('.metric-card:nth-child(4) .metric-value').textContent = hrciEnd ? hrciEnd.toFixed(1) : '0.0';
-            const hrciChangeEl = document.querySelector('.metric-card:nth-child(4) .metric-change');
-            hrciChangeEl.textContent = `${parseFloat(hrciChange) > 0 ? '▲' : '▼'} ${Math.abs(parseFloat(hrciChange))}%`;
-            hrciChangeEl.className = `metric-change ${parseFloat(hrciChange) > 0 ? 'positive' : 'negative'}`;
-            
-            // 상단 데이터 상태 업데이트
-            updateDataStatus(endIdx);
-            
-            // 시작 날짜와 종료 날짜 정보 표시 (디버깅용)
-            if (currentData.dates[startIdx] && currentData.dates[endIdx]) {
-                const startDate = currentData.dates[startIdx];
-                const endDate = currentData.dates[endIdx];
-                console.log(`기간: ${startDate.toLocaleDateString()} ~ ${endDate.toLocaleDateString()}`);
-            }
-        }
-        
-        // 데이터 상태 업데이트
-        function updateDataStatus(idx) {
-            if (currentData.dates.length === 0) return;
-            
-            const date = currentData.dates[idx];
-            const statusDate = document.getElementById('statusDate');
-            const statusIndices = document.getElementById('statusIndices');
-            
-            if (statusDate) {
-                statusDate.textContent = `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일 기준`;
-            }
-            
-            if (statusIndices) {
-                const bdi = currentData.indices.BDI[idx];
-                const scfi = currentData.indices.SCFI[idx];
-                const ccfi = currentData.indices.CCFI[idx];
-                const hrci = currentData.indices.HRCI[idx];
-                
-                statusIndices.textContent = `• BDI: ${bdi.toLocaleString()} | SCFI: ${scfi.toFixed(2)} | CCFI: ${ccfi.toFixed(2)} | HRCI: ${hrci.toFixed(1)}`;
-            }
-        }
-
-        // 2024년 1월부터 2025년 1월까지 데이터 생성
-        function generateRealisticData() {
+        // ===== 샘플 데이터 생성 =====
+        function generateSampleData() {
             const startDate = new Date('2024-01-01');
-            const endDate = new Date('2025-01-21');
+            const endDate = new Date();
             
-            // 기준 운임 (2025년 1월 현재)
             const baseRates = {
                 shanghai: {
                     sea: { la: 1628, longbeach: 1642, rotterdam: 3542, kandla: 895, paradip: 912, jnpt: 925 },
@@ -1229,110 +794,333 @@
                 }
             };
 
-            // 실제 지수 기준값 - 시간별로 다른 변동률 적용
-            const currentIndices = { BDI: 1140, SCFI: 984.73, CCFI: 962.64, HRCI: 635.6 };
-            
-            // 2주 및 1개월 데이터 추가 생성
-            const indices2WeeksAgo = { BDI: 1165, SCFI: 1005, CCFI: 978, HRCI: 645 };
-            const indices1MonthAgo = { BDI: 1185, SCFI: 1020, CCFI: 990, HRCI: 655 };
-            const indices3MonthsAgo = { BDI: 1250, SCFI: 1050, CCFI: 1020, HRCI: 680 };
-            const indices6MonthsAgo = { BDI: 1480, SCFI: 1150, CCFI: 1100, HRCI: 720 };
-            const indicesYearAgo = { BDI: 1980, SCFI: 1204, CCFI: 1142, HRCI: 693 };
-
-            let week = 0;
-            const totalWeeks = 55; // 약 13개월
-            
             for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 7)) {
                 currentData.dates.push(new Date(d));
                 
-                const progress = week / totalWeeks;
+                // 지수 데이터 생성
+                currentData.indices.BDI.push(1140 + Math.random() * 500 - 250);
+                currentData.indices.SCFI.push(984.73 + Math.random() * 200 - 100);
+                currentData.indices.CCFI.push(962.64 + Math.random() * 150 - 75);
+                currentData.indices.HRCI.push(635.6 + Math.random() * 100 - 50);
                 
-                // 비선형적인 변동 패턴 생성
-                let bdiValue, scfiValue, ccfiValue, hrciValue;
-                
-                if (week < 3) { // 2년 전
-                    bdiValue = 2200 + Math.random() * 100;
-                    scfiValue = 1350 + Math.random() * 50;
-                    ccfiValue = 1250 + Math.random() * 40;
-                    hrciValue = 750 + Math.random() * 20;
-                } else if (week < 29) { // 1년 전까지
-                    const localProgress = (week - 3) / 26;
-                    bdiValue = 2200 - (2200 - indicesYearAgo.BDI) * localProgress + (Math.random() - 0.5) * 100;
-                    scfiValue = 1350 - (1350 - indicesYearAgo.SCFI) * localProgress + (Math.random() - 0.5) * 50;
-                    ccfiValue = 1250 - (1250 - indicesYearAgo.CCFI) * localProgress + (Math.random() - 0.5) * 40;
-                    hrciValue = 750 - (750 - indicesYearAgo.HRCI) * localProgress + (Math.random() - 0.5) * 20;
-                } else if (week < 42) { // 6개월 전까지
-                    const localProgress = (week - 29) / 13;
-                    bdiValue = indicesYearAgo.BDI - (indicesYearAgo.BDI - indices6MonthsAgo.BDI) * localProgress + (Math.random() - 0.5) * 80;
-                    scfiValue = indicesYearAgo.SCFI - (indicesYearAgo.SCFI - indices6MonthsAgo.SCFI) * localProgress + (Math.random() - 0.5) * 40;
-                    ccfiValue = indicesYearAgo.CCFI - (indicesYearAgo.CCFI - indices6MonthsAgo.CCFI) * localProgress + (Math.random() - 0.5) * 30;
-                    hrciValue = indicesYearAgo.HRCI - (indicesYearAgo.HRCI - indices6MonthsAgo.HRCI) * localProgress + (Math.random() - 0.5) * 15;
-                } else if (week < 49) { // 3개월 전까지
-                    const localProgress = (week - 42) / 7;
-                    bdiValue = indices6MonthsAgo.BDI - (indices6MonthsAgo.BDI - indices3MonthsAgo.BDI) * localProgress + (Math.random() - 0.5) * 60;
-                    scfiValue = indices6MonthsAgo.SCFI - (indices6MonthsAgo.SCFI - indices3MonthsAgo.SCFI) * localProgress + (Math.random() - 0.5) * 30;
-                    ccfiValue = indices6MonthsAgo.CCFI - (indices6MonthsAgo.CCFI - indices3MonthsAgo.CCFI) * localProgress + (Math.random() - 0.5) * 25;
-                    hrciValue = indices6MonthsAgo.HRCI - (indices6MonthsAgo.HRCI - indices3MonthsAgo.HRCI) * localProgress + (Math.random() - 0.5) * 10;
-                } else if (week < 51) { // 1개월 전까지
-                    const localProgress = (week - 49) / 2;
-                    bdiValue = indices3MonthsAgo.BDI - (indices3MonthsAgo.BDI - indices1MonthAgo.BDI) * localProgress + (Math.random() - 0.5) * 30;
-                    scfiValue = indices3MonthsAgo.SCFI - (indices3MonthsAgo.SCFI - indices1MonthAgo.SCFI) * localProgress + (Math.random() - 0.5) * 15;
-                    ccfiValue = indices3MonthsAgo.CCFI - (indices3MonthsAgo.CCFI - indices1MonthAgo.CCFI) * localProgress + (Math.random() - 0.5) * 12;
-                    hrciValue = indices3MonthsAgo.HRCI - (indices3MonthsAgo.HRCI - indices1MonthAgo.HRCI) * localProgress + (Math.random() - 0.5) * 6;
-                } else if (week < 53) { // 2주 전까지
-                    const localProgress = (week - 51) / 2;
-                    bdiValue = indices1MonthAgo.BDI - (indices1MonthAgo.BDI - indices2WeeksAgo.BDI) * localProgress + (Math.random() - 0.5) * 20;
-                    scfiValue = indices1MonthAgo.SCFI - (indices1MonthAgo.SCFI - indices2WeeksAgo.SCFI) * localProgress + (Math.random() - 0.5) * 10;
-                    ccfiValue = indices1MonthAgo.CCFI - (indices1MonthAgo.CCFI - indices2WeeksAgo.CCFI) * localProgress + (Math.random() - 0.5) * 8;
-                    hrciValue = indices1MonthAgo.HRCI - (indices1MonthAgo.HRCI - indices2WeeksAgo.HRCI) * localProgress + (Math.random() - 0.5) * 4;
-                } else { // 현재까지
-                    const localProgress = (week - 53) / 2;
-                    bdiValue = indices2WeeksAgo.BDI - (indices2WeeksAgo.BDI - currentIndices.BDI) * localProgress + (Math.random() - 0.5) * 15;
-                    scfiValue = indices2WeeksAgo.SCFI - (indices2WeeksAgo.SCFI - currentIndices.SCFI) * localProgress + (Math.random() - 0.5) * 8;
-                    ccfiValue = indices2WeeksAgo.CCFI - (indices2WeeksAgo.CCFI - currentIndices.CCFI) * localProgress + (Math.random() - 0.5) * 6;
-                    hrciValue = indices2WeeksAgo.HRCI - (indices2WeeksAgo.HRCI - currentIndices.HRCI) * localProgress + (Math.random() - 0.5) * 3;
-                }
-                
-                // 지수 데이터 저장
-                currentData.indices.BDI.push(Math.round(bdiValue));
-                currentData.indices.SCFI.push(Math.round(scfiValue * 100) / 100);
-                currentData.indices.CCFI.push(Math.round(ccfiValue * 100) / 100);
-                currentData.indices.HRCI.push(Math.round(hrciValue * 10) / 10);
-                
-                // 각 출발지별 운임 데이터 생성
-                ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'].forEach(origin => {
-                    // 해상 운임 - 지수와 연동된 변동
+                // 운임 데이터 생성
+                Object.keys(baseRates).forEach(origin => {
                     Object.keys(baseRates[origin].sea).forEach(dest => {
                         const baseRate = baseRates[origin].sea[dest];
-                        const indexFactor = scfiValue / currentIndices.SCFI; // SCFI 연동
-                        const rate = Math.round(baseRate * indexFactor * (1 + (Math.random() - 0.5) * 0.05));
-                        currentData.freight[origin].sea[dest].push(rate);
+                        currentData.freight[origin].sea[dest].push(
+                            Math.round(baseRate * (1 + (Math.random() - 0.5) * 0.2))
+                        );
                     });
                     
-                    // 항공 운임 - 더 안정적인 변동
                     Object.keys(baseRates[origin].air).forEach(dest => {
                         const baseRate = baseRates[origin].air[dest];
-                        const indexFactor = 0.9 + 0.2 * (scfiValue / currentIndices.SCFI); // 부분 연동
-                        const rate = Math.round(baseRate * indexFactor * (1 + (Math.random() - 0.5) * 0.03) * 100) / 100;
-                        currentData.freight[origin].air[dest].push(rate);
+                        currentData.freight[origin].air[dest].push(
+                            Math.round(baseRate * (1 + (Math.random() - 0.5) * 0.1) * 100) / 100
+                        );
                     });
                 });
-                
-                week++;
             }
             
-            console.log('데이터 생성 완료:', currentData.dates.length, '개 주간 데이터');
-            console.log('마지막 지수 값:', {
-                BDI: currentData.indices.BDI[currentData.indices.BDI.length - 1],
-                SCFI: currentData.indices.SCFI[currentData.indices.SCFI.length - 1]
+            console.log('샘플 데이터 생성 완료:', currentData.dates.length, '개 데이터 포인트');
+        }
+
+        // ===== 탭 전환 =====
+        function switchTab(tabName) {
+            const tabs = document.querySelectorAll('.tab');
+            const contents = document.querySelectorAll('.tab-content');
+            
+            tabs.forEach(tab => tab.classList.remove('active'));
+            contents.forEach(content => content.classList.remove('active'));
+            
+            if (tabName === 'sea') {
+                tabs[0].classList.add('active');
+                document.getElementById('seaTab').classList.add('active');
+            } else {
+                tabs[1].classList.add('active');
+                document.getElementById('airTab').classList.add('active');
+            }
+        }
+
+        // ===== UI 업데이트 함수 =====
+        function updateUI() {
+            if (currentData.dates.length === 0) return;
+            
+            const lastIdx = currentData.dates.length - 1;
+            const lastDate = currentData.dates[lastIdx];
+            
+            // 날짜 정보 업데이트
+            const dateStr = `${lastDate.getFullYear()}년 ${lastDate.getMonth() + 1}월 ${lastDate.getDate()}일`;
+            document.getElementById('updateTime').textContent = `마지막 업데이트: ${dateStr} 14:30`;
+            document.getElementById('statusDate').textContent = `${dateStr} 기준`;
+            document.getElementById('rateDate').textContent = `(${dateStr} 기준)`;
+            
+            // 지수 정보 업데이트
+            const bdi = currentData.indices.BDI[lastIdx];
+            const scfi = currentData.indices.SCFI[lastIdx];
+            const ccfi = currentData.indices.CCFI[lastIdx];
+            const hrci = currentData.indices.HRCI[lastIdx];
+            
+            document.getElementById('statusIndices').textContent = 
+                `• BDI: ${Math.round(bdi).toLocaleString()} | SCFI: ${scfi.toFixed(2)} | CCFI: ${ccfi.toFixed(2)} | HRCI: ${hrci.toFixed(1)}`;
+            
+            // 메트릭스 카드 업데이트
+            updateMetrics();
+            
+            // 운임 테이블 업데이트
+            updateFreightTables(lastIdx);
+            
+            // 날짜 선택기 업데이트
+            updateDateSelector();
+            
+            // 차트 업데이트
+            updateCharts();
+        }
+
+        // ===== 메트릭스 업데이트 =====
+        function updateMetrics() {
+            if (currentData.dates.length < 2) return;
+            
+            const endIdx = currentData.dates.length - 1;
+            let startIdx = Math.max(0, endIdx - 52); // 기본 1년
+            
+            switch(currentTimeRange) {
+                case '2W': startIdx = Math.max(0, endIdx - 2); break;
+                case '1M': startIdx = Math.max(0, endIdx - 4); break;
+                case '3M': startIdx = Math.max(0, endIdx - 13); break;
+                case '6M': startIdx = Math.max(0, endIdx - 26); break;
+                case '1Y': startIdx = Math.max(0, endIdx - 52); break;
+                case '2Y': startIdx = Math.max(0, endIdx - 104); break;
+                case 'Max': startIdx = 0; break;
+            }
+            
+            // BDI
+            const bdiEnd = currentData.indices.BDI[endIdx];
+            const bdiStart = currentData.indices.BDI[startIdx];
+            const bdiChange = ((bdiEnd - bdiStart) / bdiStart * 100).toFixed(1);
+            
+            document.querySelector('.metric-card:nth-child(1) .metric-value').textContent = Math.round(bdiEnd).toLocaleString();
+            const bdiChangeEl = document.querySelector('.metric-card:nth-child(1) .metric-change');
+            bdiChangeEl.textContent = `${parseFloat(bdiChange) > 0 ? '▲' : '▼'} ${Math.abs(parseFloat(bdiChange))}%`;
+            bdiChangeEl.className = `metric-change ${parseFloat(bdiChange) > 0 ? 'positive' : 'negative'}`;
+            
+            // SCFI
+            const scfiEnd = currentData.indices.SCFI[endIdx];
+            const scfiStart = currentData.indices.SCFI[startIdx];
+            const scfiChange = ((scfiEnd - scfiStart) / scfiStart * 100).toFixed(1);
+            
+            document.querySelector('.metric-card:nth-child(2) .metric-value').textContent = scfiEnd.toFixed(2);
+            const scfiChangeEl = document.querySelector('.metric-card:nth-child(2) .metric-change');
+            scfiChangeEl.textContent = `${parseFloat(scfiChange) > 0 ? '▲' : '▼'} ${Math.abs(parseFloat(scfiChange))}%`;
+            scfiChangeEl.className = `metric-change ${parseFloat(scfiChange) > 0 ? 'positive' : 'negative'}`;
+            
+            // CCFI
+            const ccfiEnd = currentData.indices.CCFI[endIdx];
+            const ccfiStart = currentData.indices.CCFI[startIdx];
+            const ccfiChange = ((ccfiEnd - ccfiStart) / ccfiStart * 100).toFixed(1);
+            
+            document.querySelector('.metric-card:nth-child(3) .metric-value').textContent = ccfiEnd.toFixed(2);
+            const ccfiChangeEl = document.querySelector('.metric-card:nth-child(3) .metric-change');
+            ccfiChangeEl.textContent = `${parseFloat(ccfiChange) > 0 ? '▲' : '▼'} ${Math.abs(parseFloat(ccfiChange))}%`;
+            ccfiChangeEl.className = `metric-change ${parseFloat(ccfiChange) > 0 ? 'positive' : 'negative'}`;
+            
+            // HRCI
+            const hrciEnd = currentData.indices.HRCI[endIdx];
+            const hrciStart = currentData.indices.HRCI[startIdx];
+            const hrciChange = ((hrciEnd - hrciStart) / hrciStart * 100).toFixed(1);
+            
+            document.querySelector('.metric-card:nth-child(4) .metric-value').textContent = hrciEnd.toFixed(1);
+            const hrciChangeEl = document.querySelector('.metric-card:nth-child(4) .metric-change');
+            hrciChangeEl.textContent = `${parseFloat(hrciChange) > 0 ? '▲' : '▼'} ${Math.abs(parseFloat(hrciChange))}%`;
+            hrciChangeEl.className = `metric-change ${parseFloat(hrciChange) > 0 ? 'positive' : 'negative'}`;
+        }
+
+        // ===== 운임 테이블 업데이트 =====
+        function updateFreightTables(idx) {
+            const origins = ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'];
+            const originNames = ['🇨🇳 상해', '🇭🇰 홍콩', '🇨🇳 심천', '🇻🇳 하노이', '🇻🇳 호치민'];
+            
+            // 해상 운임 테이블
+            const seaTableBody = document.getElementById('seaTableBody');
+            seaTableBody.innerHTML = '';
+            
+            origins.forEach((origin, i) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="font-weight: bold;">${originNames[i]}</td>
+                    <td>$${currentData.freight[origin].sea.la[idx]?.toLocaleString() || '0'}</td>
+                    <td>$${currentData.freight[origin].sea.longbeach[idx]?.toLocaleString() || '0'}</td>
+                    <td>$${currentData.freight[origin].sea.rotterdam[idx]?.toLocaleString() || '0'}</td>
+                    <td>$${currentData.freight[origin].sea.kandla[idx]?.toLocaleString() || '0'}</td>
+                    <td>$${currentData.freight[origin].sea.paradip[idx]?.toLocaleString() || '0'}</td>
+                    <td>$${currentData.freight[origin].sea.jnpt[idx]?.toLocaleString() || '0'}</td>
+                `;
+                seaTableBody.appendChild(row);
+            });
+            
+            // 항공 운임 테이블
+            const airTableBody = document.getElementById('airTableBody');
+            airTableBody.innerHTML = '';
+            
+            origins.forEach((origin, i) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="font-weight: bold;">${originNames[i]}</td>
+                    <td>$${currentData.freight[origin].air.lax[idx]?.toFixed(2) || '0.00'}</td>
+                    <td>$${currentData.freight[origin].air.jfk[idx]?.toFixed(2) || '0.00'}</td>
+                    <td>$${currentData.freight[origin].air.vie[idx]?.toFixed(2) || '0.00'}</td>
+                    <td>$${currentData.freight[origin].air.del[idx]?.toFixed(2) || '0.00'}</td>
+                    <td>$${currentData.freight[origin].air.bom[idx]?.toFixed(2) || '0.00'}</td>
+                    <td>$${currentData.freight[origin].air.blr[idx]?.toFixed(2) || '0.00'}</td>
+                `;
+                airTableBody.appendChild(row);
             });
         }
 
-        // CSV 다운로드 함수
-        function downloadCurrentData() {
+        // ===== 날짜 선택기 업데이트 =====
+        function updateDateSelector() {
+            const dateSelector = document.getElementById('dateSelector');
+            dateSelector.innerHTML = '';
+            
+            for (let i = currentData.dates.length - 1; i >= 0; i--) {
+                const date = currentData.dates[i];
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
+                dateSelector.appendChild(option);
+            }
+            
+            dateSelector.addEventListener('change', function() {
+                const selectedIdx = parseInt(this.value);
+                updateFreightTables(selectedIdx);
+                
+                const selectedDate = currentData.dates[selectedIdx];
+                document.getElementById('rateDate').textContent = 
+                    `(${selectedDate.getFullYear()}년 ${selectedDate.getMonth() + 1}월 ${selectedDate.getDate()}일 기준)`;
+            });
+        }
+
+        // ===== 차트 업데이트 =====
+        function updateCharts() {
+            // 해운 지수 차트
+            const ctx1 = document.getElementById('indexChart').getContext('2d');
+            
+            if (charts.index) charts.index.destroy();
+            
+            let dataPoints = 52;
+            switch(currentTimeRange) {
+                case '2W': dataPoints = 2; break;
+                case '1M': dataPoints = 4; break;
+                case '3M': dataPoints = 13; break;
+                case '6M': dataPoints = 26; break;
+                case '1Y': dataPoints = 52; break;
+                case '2Y': dataPoints = 104; break;
+                case 'Max': dataPoints = currentData.dates.length; break;
+            }
+            
+            const sliceStart = Math.max(0, currentData.dates.length - dataPoints);
+            const labels = currentData.dates.slice(sliceStart).map(d => 
+                `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+            );
+            
+            charts.index = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'BDI',
+                            data: currentData.indices.BDI.slice(sliceStart),
+                            borderColor: '#3498db',
+                            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                            tension: 0.4
+                        },
+                        {
+                            label: 'SCFI',
+                            data: currentData.indices.SCFI.slice(sliceStart),
+                            borderColor: '#e74c3c',
+                            backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' }
+                    }
+                }
+            });
+            
+            // 북미 해상 운임 차트
+            updateUSSeaChart();
+        }
+
+        function updateUSSeaChart() {
+            const ctx = document.getElementById('usSeaChart').getContext('2d');
+            const selectedOrigin = document.getElementById('usSeaOriginSelect').value;
+            
+            if (charts.usSea) charts.usSea.destroy();
+            
+            let dataPoints = 52;
+            switch(currentTimeRange) {
+                case '2W': dataPoints = 2; break;
+                case '1M': dataPoints = 4; break;
+                case '3M': dataPoints = 13; break;
+                case '6M': dataPoints = 26; break;
+                case '1Y': dataPoints = 52; break;
+                case '2Y': dataPoints = 104; break;
+                case 'Max': dataPoints = currentData.dates.length; break;
+            }
+            
+            const sliceStart = Math.max(0, currentData.dates.length - dataPoints);
+            const labels = currentData.dates.slice(sliceStart).map(d => 
+                `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+            );
+            
+            const datasets = [];
+            const origins = selectedOrigin === 'all' ? 
+                ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'] : [selectedOrigin];
+            const colors = {
+                shanghai: '#3498db',
+                hongkong: '#e74c3c',
+                shenzhen: '#9b59b6',
+                hanoi: '#f39c12',
+                hochiminh: '#2ecc71'
+            };
+            const names = {
+                shanghai: '상해',
+                hongkong: '홍콩',
+                shenzhen: '심천',
+                hanoi: '하노이',
+                hochiminh: '호치민'
+            };
+            
+            origins.forEach(origin => {
+                datasets.push({
+                    label: `${names[origin]} → LA`,
+                    data: currentData.freight[origin].sea.la.slice(sliceStart),
+                    borderColor: colors[origin],
+                    tension: 0.4
+                });
+            });
+            
+            charts.usSea = new Chart(ctx, {
+                type: 'line',
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top' } },
+                    scales: { y: { title: { display: true, text: 'USD/TEU' } } }
+                }
+            });
+        }
+
+        // ===== CSV 다운로드 =====
+        function downloadCSV() {
             let csvContent = '날짜,BDI,SCFI,CCFI,HRCI,';
             
-            // 헤더 생성
             const origins = ['상해', '홍콩', '심천', '하노이', '호치민'];
             const seaPorts = ['LA', '롱비치', '로테르담', 'Kandla', 'Paradip', 'JNPT'];
             const airports = ['LAX', 'JFK', 'VIE', 'DEL', 'BOM', 'BLR'];
@@ -1343,7 +1131,6 @@
             });
             csvContent = csvContent.slice(0, -1) + '\n';
             
-            // 데이터 행 생성
             for (let i = 0; i < currentData.dates.length; i++) {
                 const date = currentData.dates[i].toISOString().split('T')[0];
                 let row = `${date},${currentData.indices.BDI[i]},${currentData.indices.SCFI[i]},${currentData.indices.CCFI[i]},${currentData.indices.HRCI[i]},`;
@@ -1360,7 +1147,6 @@
                 csvContent += row.slice(0, -1) + '\n';
             }
             
-            // 다운로드
             const BOM = '\uFEFF';
             const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
@@ -1373,10 +1159,12 @@
             URL.revokeObjectURL(url);
         }
 
-        // 파일 업로드 설정
+        // ===== 파일 업로드 처리 =====
         function setupFileUpload() {
             const fileInput = document.getElementById('fileInput');
             const uploadArea = document.getElementById('uploadArea');
+            
+            if (!uploadArea || !fileInput) return;
             
             uploadArea.addEventListener('click', () => fileInput.click());
             
@@ -1386,7 +1174,6 @@
                 }
             });
             
-            // 드래그 앤 드롭
             uploadArea.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 uploadArea.classList.add('dragover');
@@ -1426,7 +1213,7 @@
                     }
                     
                     fileInfo.textContent = `✅ 파일 로드 완료: ${file.name}`;
-                    updateCharts();
+                    updateUI();
                 } catch (error) {
                     fileInfo.textContent = `❌ 파일 처리 오류: ${error.message}`;
                     fileInfo.style.color = '#e74c3c';
@@ -1440,1057 +1227,125 @@
             }
         }
 
-function parseCSV(csvText) {
-    try {
-        // CSV 파싱
-        const lines = csvText.split('\n').filter(line => line.trim());
-        if (lines.length < 2) {
-            throw new Error('CSV 파일에 데이터가 부족합니다.');
-        }
-        
-        // 데이터 초기화
-        currentData.dates = [];
-        currentData.indices = { BDI: [], SCFI: [], CCFI: [], HRCI: [] };
-        
-        // 각 출발지별 초기화
-        const origins = ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'];
-        origins.forEach(origin => {
-            currentData.freight[origin] = {
-                sea: { la: [], longbeach: [], rotterdam: [], kandla: [], paradip: [], jnpt: [] },
-                air: { lax: [], jfk: [], vie: [], del: [], bom: [], blr: [] }
-            };
-        });
-        
-        // 헤더 스킵하고 데이터 파싱
-        for (let i = 1; i < lines.length; i++) {
-            const cols = lines[i].split(',');
-            if (cols.length < 65) continue; // 데이터가 부족한 행은 스킵
+        function parseCSV(csvText) {
+            const lines = csvText.split('\n').filter(line => line.trim());
+            if (lines.length < 2) return;
             
-            // 날짜 파싱 (유효성 검사 추가)
-            const dateStr = cols[0].trim();
-            const date = new Date(dateStr);
+            // 데이터 초기화
+            currentData.dates = [];
+            currentData.indices = { BDI: [], SCFI: [], CCFI: [], HRCI: [] };
             
-            if (isNaN(date.getTime())) {
-                console.warn(`잘못된 날짜 형식: ${dateStr}`);
-                continue;
-            }
-            
-            currentData.dates.push(date);
-            
-            // 지수 데이터 파싱 (숫자 검증)
-            currentData.indices.BDI.push(parseFloat(cols[1]) || 0);
-            currentData.indices.SCFI.push(parseFloat(cols[2]) || 0);
-            currentData.indices.CCFI.push(parseFloat(cols[3]) || 0);
-            currentData.indices.HRCI.push(parseFloat(cols[4]) || 0);
-            
-            // 운임 데이터 파싱
-            let colIdx = 5;
-            origins.forEach(origin => {
-                // 해상 운임 (6개 도착지)
-                currentData.freight[origin].sea.la.push(parseFloat(cols[colIdx++]) || 0);
-                currentData.freight[origin].sea.longbeach.push(parseFloat(cols[colIdx++]) || 0);
-                currentData.freight[origin].sea.rotterdam.push(parseFloat(cols[colIdx++]) || 0);
-                currentData.freight[origin].sea.kandla.push(parseFloat(cols[colIdx++]) || 0);
-                currentData.freight[origin].sea.paradip.push(parseFloat(cols[colIdx++]) || 0);
-                currentData.freight[origin].sea.jnpt.push(parseFloat(cols[colIdx++]) || 0);
-                
-                // 항공 운임 (6개 도착지)
-                currentData.freight[origin].air.lax.push(parseFloat(cols[colIdx++]) || 0);
-                currentData.freight[origin].air.jfk.push(parseFloat(cols[colIdx++]) || 0);
-                currentData.freight[origin].air.vie.push(parseFloat(cols[colIdx++]) || 0);
-                currentData.freight[origin].air.del.push(parseFloat(cols[colIdx++]) || 0);
-                currentData.freight[origin].air.bom.push(parseFloat(cols[colIdx++]) || 0);
-                currentData.freight[origin].air.blr.push(parseFloat(cols[colIdx++]) || 0);
-            });
-        }
-        
-        // 데이터가 제대로 파싱되었는지 확인
-        if (currentData.dates.length === 0) {
-            throw new Error('유효한 데이터가 없습니다.');
-        }
-        
-        // UI 업데이트
-        if (currentData.dates.length > 0) {
-            const lastIdx = currentData.dates.length - 1;
-            
-            // 메트릭스 업데이트
-            updateMetricsForTimeRange(currentTimeRange);
-            
-            // 운임 테이블 업데이트
-            updateFreightTables(lastIdx);
-            
-            // 날짜 선택기 업데이트
-            updateDateSelector();
-            
-            // 상단 데이터 상태 업데이트
-            updateDataStatus(lastIdx);
-            
-            // Firebase에 데이터 업로드 (관리자인 경우)
-            if (firebaseEnabled && isAdmin) {
-                uploadDataToFirebase();
-            }
-        }
-        
-        // 차트 업데이트
-        updateCharts(currentTimeRange);
-        analyzeFreightChanges(currentTimeRange);
-        
-        console.log('CSV 파싱 완료:', currentData.dates.length, '개 데이터 포인트');
-    } catch (error) {
-        console.error('CSV 파싱 오류:', error);
-        alert('CSV 파일 처리 중 오류가 발생했습니다.\n' + error.message);
-        
-        // 오류 시 로컬 데이터 생성
-        generateRealisticData();
-        updateCharts(currentTimeRange);
-    }
-}
-        
-        // 운임 테이블 업데이트 함수
-        function updateFreightTables(idx) {
-            // 해상 운임 테이블 업데이트
-            const seaTable = document.querySelector('#seaTab tbody');
-            if (seaTable) {
-                const origins = ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'];
-                const originNames = ['🇨🇳 상해', '🇭🇰 홍콩', '🇨🇳 심천', '🇻🇳 하노이', '🇻🇳 호치민'];
-                
-                seaTable.innerHTML = '';
-                origins.forEach((origin, i) => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td style="font-weight: bold;">${originNames[i]}</td>
-                        <td>${currentData.freight[origin].sea.la[idx]?.toLocaleString() || '0'}</td>
-                        <td>${currentData.freight[origin].sea.longbeach[idx]?.toLocaleString() || '0'}</td>
-                        <td>${currentData.freight[origin].sea.rotterdam[idx]?.toLocaleString() || '0'}</td>
-                        <td>${currentData.freight[origin].sea.kandla[idx]?.toLocaleString() || '0'}</td>
-                        <td>${currentData.freight[origin].sea.paradip[idx]?.toLocaleString() || '0'}</td>
-                        <td>${currentData.freight[origin].sea.jnpt[idx]?.toLocaleString() || '0'}</td>
-                    `;
-                    seaTable.appendChild(row);
-                });
-            }
-            
-            // 항공 운임 테이블 업데이트
-            const airTable = document.querySelector('#airTab tbody');
-            if (airTable) {
-                const origins = ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'];
-                const originNames = ['🇨🇳 상해', '🇭🇰 홍콩', '🇨🇳 심천', '🇻🇳 하노이', '🇻🇳 호치민'];
-                
-                airTable.innerHTML = '';
-                origins.forEach((origin, i) => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td style="font-weight: bold;">${originNames[i]}</td>
-                        <td>${currentData.freight[origin].air.lax[idx]?.toFixed(2) || '0.00'}</td>
-                        <td>${currentData.freight[origin].air.jfk[idx]?.toFixed(2) || '0.00'}</td>
-                        <td>${currentData.freight[origin].air.vie[idx]?.toFixed(2) || '0.00'}</td>
-                        <td>${currentData.freight[origin].air.del[idx]?.toFixed(2) || '0.00'}</td>
-                        <td>${currentData.freight[origin].air.bom[idx]?.toFixed(2) || '0.00'}</td>
-                        <td>${currentData.freight[origin].air.blr[idx]?.toFixed(2) || '0.00'}</td>
-                    `;
-                    airTable.appendChild(row);
-                });
-            }
-        }
-
-        // 차트 생성 함수들
-        function createIndexChart(timeRange = '1Y') {
-            const ctx = document.getElementById('indexChart').getContext('2d');
-            
-            if (charts.index) charts.index.destroy();
-            
-            // 시간 범위에 따른 데이터 필터링
-            let dataPoints = 52; // 기본 1년
-            let periodText = '';
-            const endDate = new Date();
-            let startDate = new Date();
-            
-            switch(timeRange) {
-                case '2W':
-                    dataPoints = 2;
-                    startDate.setDate(endDate.getDate() - 14);
-                    periodText = `(최근 2주)`;
-                    break;
-                case '1M':
-                    dataPoints = 4;
-                    startDate.setMonth(endDate.getMonth() - 1);
-                    periodText = `(최근 1개월)`;
-                    break;
-                case '3M':
-                    dataPoints = 13;
-                    startDate.setMonth(endDate.getMonth() - 3);
-                    periodText = `(${startDate.getFullYear()}.${String(startDate.getMonth() + 1).padStart(2, '0')} - ${endDate.getFullYear()}.${String(endDate.getMonth() + 1).padStart(2, '0')})`;
-                    break;
-                case '6M':
-                    dataPoints = 26;
-                    startDate.setMonth(endDate.getMonth() - 6);
-                    periodText = `(${startDate.getFullYear()}.${String(startDate.getMonth() + 1).padStart(2, '0')} - ${endDate.getFullYear()}.${String(endDate.getMonth() + 1).padStart(2, '0')})`;
-                    break;
-                case '1Y':
-                    dataPoints = 52;
-                    startDate.setFullYear(endDate.getFullYear() - 1);
-                    periodText = `(${startDate.getFullYear()} - ${endDate.getFullYear()})`;
-                    break;
-                case '2Y':
-                    dataPoints = 104;
-                    startDate.setFullYear(endDate.getFullYear() - 2);
-                    periodText = `(${startDate.getFullYear()} - ${endDate.getFullYear()})`;
-                    break;
-                case 'Max':
-                    dataPoints = currentData.dates.length;
-                    if (currentData.dates.length > 0) {
-                        startDate = currentData.dates[0];
-                        periodText = `(${startDate.getFullYear()} - ${endDate.getFullYear()})`;
-                    }
-                    break;
-            }
-            
-            // 기간 텍스트 업데이트
-            document.getElementById('indexChartPeriod').textContent = periodText;
-            
-            const labels = currentData.dates.map(d => 
-                `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-            );
-            
-            // 데이터 슬라이싱
-            const sliceStart = Math.max(0, labels.length - dataPoints);
-            
-            charts.index = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels.slice(sliceStart),
-                    datasets: [
-                        {
-                            label: 'BDI',
-                            data: currentData.indices.BDI.slice(sliceStart),
-                            borderColor: '#3498db',
-                            backgroundColor: 'rgba(52, 152, 219, 0.1)',
-                            tension: 0.4,
-                            yAxisID: 'y'
-                        },
-                        {
-                            label: 'SCFI',
-                            data: currentData.indices.SCFI.slice(sliceStart),
-                            borderColor: '#e74c3c',
-                            backgroundColor: 'rgba(231, 76, 60, 0.1)',
-                            tension: 0.4,
-                            yAxisID: 'y'
-                        },
-                        {
-                            label: 'CCFI',
-                            data: currentData.indices.CCFI.slice(sliceStart),
-                            borderColor: '#f39c12',
-                            backgroundColor: 'rgba(243, 156, 18, 0.1)',
-                            tension: 0.4,
-                            yAxisID: 'y'
-                        },
-                        {
-                            label: 'HRCI',
-                            data: currentData.indices.HRCI.slice(sliceStart),
-                            borderColor: '#2ecc71',
-                            backgroundColor: 'rgba(46, 204, 113, 0.1)',
-                            tension: 0.4,
-                            yAxisID: 'y1'
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'top' },
-                        tooltip: { mode: 'index', intersect: false }
-                    },
-                    scales: {
-                        y: {
-                            type: 'linear',
-                            display: true,
-                            position: 'left',
-                            title: { display: true, text: 'BDI / SCFI / CCFI' }
-                        },
-                        y1: {
-                            type: 'linear',
-                            display: true,
-                            position: 'right',
-                            title: { display: true, text: 'HRCI' },
-                            grid: { drawOnChartArea: false }
-                        }
-                    }
-                }
-            });
-        }
-
-        // 북미 해상 운임 차트
-        function createUSSeaChart(timeRange = '1Y') {
-            updateUSSeaChart(timeRange);
-        }
-
-        function updateUSSeaChart(timeRange = '1Y') {
-            const ctx = document.getElementById('usSeaChart').getContext('2d');
-            const selectedOrigin = document.getElementById('usSeaOriginSelect').value;
-            
-            if (charts.usSea) charts.usSea.destroy();
-            
-            // 시간 범위에 따른 데이터 포인트 결정
-            let dataPoints = 12;
-            switch(timeRange) {
-                case '2W': dataPoints = 2; break;
-                case '1M': dataPoints = 4; break;
-                case '3M': dataPoints = 13; break;
-                case '6M': dataPoints = 26; break;
-                case '1Y': dataPoints = 52; break;
-                case '2Y': dataPoints = 104; break;
-                case 'Max': dataPoints = currentData.dates.length; break;
-            }
-            
-            const labels = currentData.dates.map(d => 
-                `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-            ).slice(-dataPoints);
-            
-            const datasets = [];
-            const origins = selectedOrigin === 'all' ? 
-                ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'] : [selectedOrigin];
-            const colors = {
-                shanghai: '#3498db',
-                hongkong: '#e74c3c',
-                shenzhen: '#9b59b6',
-                hanoi: '#f39c12',
-                hochiminh: '#2ecc71'
-            };
-            const names = {
-                shanghai: '상해',
-                hongkong: '홍콩',
-                shenzhen: '심천',
-                hanoi: '하노이',
-                hochiminh: '호치민'
-            };
-            
-            origins.forEach(origin => {
-                datasets.push({
-                    label: `${names[origin]} → LA`,
-                    data: currentData.freight[origin].sea.la.slice(-dataPoints),
-                    borderColor: colors[origin],
-                    tension: 0.4
-                });
-                datasets.push({
-                    label: `${names[origin]} → 롱비치`,
-                    data: currentData.freight[origin].sea.longbeach.slice(-dataPoints),
-                    borderColor: colors[origin],
-                    borderDash: [5, 5],
-                    tension: 0.4
-                });
-            });
-            
-            charts.usSea = new Chart(ctx, {
-                type: 'line',
-                data: { labels, datasets },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'top' } },
-                    scales: { y: { title: { display: true, text: 'USD/TEU' } } }
-                }
-            });
-        }
-
-        // 유럽 해상 운임 차트
-        function createEUSeaChart(timeRange = '1Y') {
-            updateEUSeaChart(timeRange);
-        }
-
-        function updateEUSeaChart(timeRange = '1Y') {
-            const ctx = document.getElementById('euSeaChart').getContext('2d');
-            const selectedOrigin = document.getElementById('euSeaOriginSelect').value;
-            
-            if (charts.euSea) charts.euSea.destroy();
-            
-            // 시간 범위에 따른 데이터 포인트 결정
-            let dataPoints = 12;
-            switch(timeRange) {
-                case '2W': dataPoints = 2; break;
-                case '1M': dataPoints = 4; break;
-                case '3M': dataPoints = 13; break;
-                case '6M': dataPoints = 26; break;
-                case '1Y': dataPoints = 52; break;
-                case '2Y': dataPoints = 104; break;
-                case 'Max': dataPoints = currentData.dates.length; break;
-            }
-            
-            const labels = currentData.dates.map(d => 
-                `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-            ).slice(-dataPoints);
-            
-            const datasets = [];
-            const origins = selectedOrigin === 'all' ? 
-                ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'] : [selectedOrigin];
-            const colors = {
-                shanghai: '#3498db',
-                hongkong: '#e74c3c',
-                shenzhen: '#9b59b6',
-                hanoi: '#f39c12',
-                hochiminh: '#2ecc71'
-            };
-            const names = {
-                shanghai: '상해',
-                hongkong: '홍콩',
-                shenzhen: '심천',
-                hanoi: '하노이',
-                hochiminh: '호치민'
-            };
-            
-            origins.forEach(origin => {
-                datasets.push({
-                    label: `${names[origin]} → 로테르담`,
-                    data: currentData.freight[origin].sea.rotterdam.slice(-dataPoints),
-                    borderColor: colors[origin],
-                    tension: 0.4
-                });
-            });
-            
-            charts.euSea = new Chart(ctx, {
-                type: 'line',
-                data: { labels, datasets },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'top' } },
-                    scales: { y: { title: { display: true, text: 'USD/TEU' } } }
-                }
-            });
-        }
-
-        // 인도 해상 운임 차트
-        function createIndiaSeaChart(timeRange = '1Y') {
-            updateIndiaSeaChart(timeRange);
-        }
-
-        function updateIndiaSeaChart(timeRange = '1Y') {
-            const ctx = document.getElementById('indiaSeaChart').getContext('2d');
-            const selectedOrigin = document.getElementById('indiaSeaOriginSelect').value;
-            
-            if (charts.indiaSea) charts.indiaSea.destroy();
-            
-            // 시간 범위에 따른 데이터 포인트 결정
-            let dataPoints = 12;
-            switch(timeRange) {
-                case '3M': dataPoints = 3; break;
-                case '6M': dataPoints = 6; break;
-                case '1Y': dataPoints = 12; break;
-                case '2Y': dataPoints = 24; break;
-                case 'Max': dataPoints = currentData.dates.length; break;
-            }
-            
-            const labels = currentData.dates.map(d => 
-                `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-            ).slice(-dataPoints);
-            
-            const datasets = [];
-            const origins = selectedOrigin === 'all' ? 
-                ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'] : [selectedOrigin];
-            const colors = {
-                shanghai: '#3498db',
-                hongkong: '#e74c3c',
-                shenzhen: '#9b59b6',
-                hanoi: '#f39c12',
-                hochiminh: '#2ecc71'
-            };
-            const names = {
-                shanghai: '상해',
-                hongkong: '홍콩',
-                shenzhen: '심천',
-                hanoi: '하노이',
-                hochiminh: '호치민'
-            };
-            
-            origins.forEach(origin => {
-                datasets.push({
-                    label: `${names[origin]} → Kandla`,
-                    data: currentData.freight[origin].sea.kandla.slice(-dataPoints),
-                    borderColor: colors[origin],
-                    tension: 0.4
-                });
-                datasets.push({
-                    label: `${names[origin]} → Paradip`,
-                    data: currentData.freight[origin].sea.paradip.slice(-dataPoints),
-                    borderColor: colors[origin],
-                    borderDash: [5, 5],
-                    tension: 0.4
-                });
-                datasets.push({
-                    label: `${names[origin]} → JNPT`,
-                    data: currentData.freight[origin].sea.jnpt.slice(-dataPoints),
-                    borderColor: colors[origin],
-                    borderDash: [2, 2],
-                    tension: 0.4
-                });
-            });
-            
-            charts.indiaSea = new Chart(ctx, {
-                type: 'line',
-                data: { labels, datasets },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'top' } },
-                    scales: { y: { title: { display: true, text: 'USD/TEU' } } }
-                }
-            });
-        }
-
-        // 북미 항공 운임 차트
-        function createUSAirChart(timeRange = '1Y') {
-            updateUSAirChart(timeRange);
-        }
-
-        function updateUSAirChart(timeRange = '1Y') {
-            const ctx = document.getElementById('usAirChart').getContext('2d');
-            const selectedOrigin = document.getElementById('usAirOriginSelect').value;
-            
-            if (charts.usAir) charts.usAir.destroy();
-            
-            // 시간 범위에 따른 데이터 포인트 결정
-            let dataPoints = 12;
-            switch(timeRange) {
-                case '3M': dataPoints = 3; break;
-                case '6M': dataPoints = 6; break;
-                case '1Y': dataPoints = 12; break;
-                case '2Y': dataPoints = 24; break;
-                case 'Max': dataPoints = currentData.dates.length; break;
-            }
-            
-            const labels = currentData.dates.map(d => 
-                `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-            ).slice(-dataPoints);
-            
-            const datasets = [];
-            const origins = selectedOrigin === 'all' ? 
-                ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'] : [selectedOrigin];
-            const colors = {
-                shanghai: '#3498db',
-                hongkong: '#e74c3c',
-                shenzhen: '#9b59b6',
-                hanoi: '#f39c12',
-                hochiminh: '#2ecc71'
-            };
-            const names = {
-                shanghai: '상해',
-                hongkong: '홍콩',
-                shenzhen: '심천',
-                hanoi: '하노이',
-                hochiminh: '호치민'
-            };
-            
-            origins.forEach(origin => {
-                datasets.push({
-                    label: `${names[origin]} → LAX`,
-                    data: currentData.freight[origin].air.lax.slice(-dataPoints),
-                    borderColor: colors[origin],
-                    tension: 0.4
-                });
-                datasets.push({
-                    label: `${names[origin]} → JFK`,
-                    data: currentData.freight[origin].air.jfk.slice(-dataPoints),
-                    borderColor: colors[origin],
-                    borderDash: [5, 5],
-                    tension: 0.4
-                });
-            });
-            
-            charts.usAir = new Chart(ctx, {
-                type: 'line',
-                data: { labels, datasets },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'top' } },
-                    scales: { y: { title: { display: true, text: 'USD/kg' } } }
-                }
-            });
-        }
-
-        // 인도 항공 운임 차트
-        function createIndiaAirChart(timeRange = '1Y') {
-            updateIndiaAirChart(timeRange);
-        }
-
-        function updateIndiaAirChart(timeRange = '1Y') {
-            const ctx = document.getElementById('indiaAirChart').getContext('2d');
-            const selectedOrigin = document.getElementById('indiaAirOriginSelect').value;
-            
-            if (charts.indiaAir) charts.indiaAir.destroy();
-            
-            // 시간 범위에 따른 데이터 포인트 결정
-            let dataPoints = 12;
-            switch(timeRange) {
-                case '3M': dataPoints = 3; break;
-                case '6M': dataPoints = 6; break;
-                case '1Y': dataPoints = 12; break;
-                case '2Y': dataPoints = 24; break;
-                case 'Max': dataPoints = currentData.dates.length; break;
-            }
-            
-            const labels = currentData.dates.map(d => 
-                `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-            ).slice(-dataPoints);
-            
-            const datasets = [];
-            const origins = selectedOrigin === 'all' ? 
-                ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'] : [selectedOrigin];
-            const colors = {
-                shanghai: '#3498db',
-                hongkong: '#e74c3c',
-                shenzhen: '#9b59b6',
-                hanoi: '#f39c12',
-                hochiminh: '#2ecc71'
-            };
-            const names = {
-                shanghai: '상해',
-                hongkong: '홍콩',
-                shenzhen: '심천',
-                hanoi: '하노이',
-                hochiminh: '호치민'
-            };
-            
-            origins.forEach(origin => {
-                datasets.push({
-                    label: `${names[origin]} → DEL`,
-                    data: currentData.freight[origin].air.del.slice(-dataPoints),
-                    borderColor: colors[origin],
-                    tension: 0.4
-                });
-                datasets.push({
-                    label: `${names[origin]} → BOM`,
-                    data: currentData.freight[origin].air.bom.slice(-dataPoints),
-                    borderColor: colors[origin],
-                    borderDash: [5, 5],
-                    tension: 0.4
-                });
-                datasets.push({
-                    label: `${names[origin]} → BLR`,
-                    data: currentData.freight[origin].air.blr.slice(-dataPoints),
-                    borderColor: colors[origin],
-                    borderDash: [2, 2],
-                    tension: 0.4
-                });
-            });
-            
-            charts.indiaAir = new Chart(ctx, {
-                type: 'line',
-                data: { labels, datasets },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'top' } },
-                    scales: { y: { title: { display: true, text: 'USD/kg' } } }
-                }
-            });
-        }
-
-        // 모든 차트 업데이트
-        function updateCharts(timeRange = '1Y') {
-            createIndexChart(timeRange);
-            createUSSeaChart(timeRange);
-            createEUSeaChart(timeRange);
-            createIndiaSeaChart(timeRange);
-            createUSAirChart(timeRange);
-            createIndiaAirChart(timeRange);
-        }
-        
-        // 전역 시간 범위 변수
-        let currentTimeRange = '1Y';
-
-        // 운임 변동 분석 함수
-        function analyzeFreightChanges(timeRange) {
-            const analysisDiv = document.getElementById('freightAnalysis');
-            const analysisContent = document.getElementById('analysisContent');
-            const dateRangeSpan = document.getElementById('analysisDateRange');
-            
-            // 분석 섹션 표시
-            analysisDiv.style.display = 'block';
-            
-            // 시간 범위에 따른 데이터 포인트 결정
-            let dataPoints = 13;
-            let periodText = '';
-            const endDate = new Date();
-            let startDate = new Date();
-            
-            switch(timeRange) {
-                case '2W':
-                    dataPoints = 2;
-                    periodText = '최근 2주';
-                    break;
-                case '1M':
-                    dataPoints = 4;
-                    periodText = '최근 1개월';
-                    break;
-                case '3M':
-                    dataPoints = 13;
-                    startDate.setMonth(endDate.getMonth() - 3);
-                    periodText = `${startDate.getFullYear()}년 ${startDate.getMonth() + 1}월 ~ ${endDate.getFullYear()}년 ${endDate.getMonth() + 1}월`;
-                    break;
-                case '6M':
-                    dataPoints = 26;
-                    startDate.setMonth(endDate.getMonth() - 6);
-                    periodText = `${startDate.getFullYear()}년 ${startDate.getMonth() + 1}월 ~ ${endDate.getFullYear()}년 ${endDate.getMonth() + 1}월`;
-                    break;
-                case '1Y':
-                    dataPoints = 52;
-                    startDate.setFullYear(endDate.getFullYear() - 1);
-                    periodText = `${startDate.getFullYear()}년 ${startDate.getMonth() + 1}월 ~ ${endDate.getFullYear()}년 ${endDate.getMonth() + 1}월`;
-                    break;
-                case '2Y':
-                    dataPoints = 104;
-                    startDate.setFullYear(endDate.getFullYear() - 2);
-                    periodText = `${startDate.getFullYear()}년 ~ ${endDate.getFullYear()}년`;
-                    break;
-                case 'Max':
-                    dataPoints = currentData.dates.length;
-                    periodText = '전체 기간';
-                    break;
-            }
-            
-            dateRangeSpan.textContent = `(${periodText})`;
-            
-            // 데이터 분석
-            const sliceStart = Math.max(0, currentData.dates.length - dataPoints);
-            const dates = currentData.dates.slice(sliceStart);
-            
-            // 지수 분석
-            const indicesAnalysis = analyzeIndices(sliceStart, dataPoints);
-            
-            // 주요 노선 분석
-            const routeAnalysis = analyzeMainRoutes(sliceStart, dataPoints);
-            
-            // HTML 생성
-            let analysisHTML = '';
-            
-            // 지수 변동 분석
-            analysisHTML += `
-                <div style="background: white; padding: 15px; border-radius: 10px; border-left: 4px solid #3498db;">
-                    <h4 style="color: #2c3e50; margin-bottom: 10px;">📊 해운 지수 변동</h4>
-                    <div style="color: #34495e; line-height: 1.6; font-size: 0.9em;">
-                        ${indicesAnalysis.bdi}<br><br>
-                        ${indicesAnalysis.scfi}<br><br>
-                        ${indicesAnalysis.summary}
-                    </div>
-                </div>
-            `;
-            
-            // 해상 운임 분석
-            analysisHTML += `
-                <div style="background: white; padding: 15px; border-radius: 10px; border-left: 4px solid #e74c3c;">
-                    <h4 style="color: #2c3e50; margin-bottom: 10px;">🚢 북미 해상 운임 변동</h4>
-                    <div style="color: #34495e; line-height: 1.6; font-size: 0.9em;">
-                        ${routeAnalysis.usSeaShanghai}
-                    </div>
-                </div>
-            `;
-            
-            // 유럽 운임 분석
-            analysisHTML += `
-                <div style="background: white; padding: 15px; border-radius: 10px; border-left: 4px solid #f39c12;">
-                    <h4 style="color: #2c3e50; margin-bottom: 10px;">🌍 유럽 해상 운임 변동</h4>
-                    <div style="color: #34495e; line-height: 1.6; font-size: 0.9em;">
-                        ${routeAnalysis.euSeaShanghai}
-                    </div>
-                </div>
-            `;
-            
-            // 항공 운임 분석
-            analysisHTML += `
-                <div style="background: white; padding: 15px; border-radius: 10px; border-left: 4px solid #2ecc71;">
-                    <h4 style="color: #2c3e50; margin-bottom: 10px;">✈️ 항공 운임 변동</h4>
-                    <div style="color: #34495e; line-height: 1.6; font-size: 0.9em;">
-                        ${routeAnalysis.airFreight}<br><br>
-                        ${routeAnalysis.airPattern}
-                    </div>
-                </div>
-            `;
-            
-            analysisContent.innerHTML = analysisHTML;
-        }
-        
-        // 지수 분석 함수 - 수치 중심
-        function analyzeIndices(start, points) {
-            const bdiData = currentData.indices.BDI.slice(start);
-            const scfiData = currentData.indices.SCFI.slice(start);
-            const ccfiData = currentData.indices.CCFI.slice(start);
-            const hrciData = currentData.indices.HRCI.slice(start);
-            
-            if (bdiData.length < 2) {
-                return {
-                    bdi: '데이터 부족',
-                    scfi: '데이터 부족',
-                    summary: '분석할 데이터가 충분하지 않습니다.'
-                };
-            }
-            
-            // BDI 상세 분석
-            const bdiStart = bdiData[0];
-            const bdiEnd = bdiData[bdiData.length - 1];
-            const bdiMax = Math.max(...bdiData);
-            const bdiMin = Math.min(...bdiData);
-            const bdiAvg = (bdiData.reduce((a, b) => a + b, 0) / bdiData.length).toFixed(0);
-            const bdiChange = ((bdiEnd - bdiStart) / bdiStart * 100).toFixed(1);
-            const bdiVolatility = ((bdiMax - bdiMin) / bdiAvg * 100).toFixed(1);
-            
-            let bdiAnalysis = `<strong>BDI 지수 상세:</strong><br>`;
-            bdiAnalysis += `• 시작값: ${bdiStart.toLocaleString()} → 종료값: ${bdiEnd.toLocaleString()} (변동률: ${bdiChange}%)<br>`;
-            bdiAnalysis += `• 최고값: ${bdiMax.toLocaleString()} / 최저값: ${bdiMin.toLocaleString()}<br>`;
-            bdiAnalysis += `• 평균값: ${bdiAvg} / 변동성: ${bdiVolatility}%<br>`;
-            bdiAnalysis += `• 최고-최저 차이: ${(bdiMax - bdiMin).toLocaleString()} (${((bdiMax - bdiMin) / bdiMin * 100).toFixed(1)}%)`;
-            
-            // SCFI 상세 분석
-            const scfiStart = scfiData[0];
-            const scfiEnd = scfiData[scfiData.length - 1];
-            const scfiMax = Math.max(...scfiData);
-            const scfiMin = Math.min(...scfiData);
-            const scfiAvg = (scfiData.reduce((a, b) => a + b, 0) / scfiData.length).toFixed(2);
-            const scfiChange = ((scfiEnd - scfiStart) / scfiStart * 100).toFixed(1);
-            
-            let scfiAnalysis = `<strong>SCFI 지수 상세:</strong><br>`;
-            scfiAnalysis += `• 시작값: ${scfiStart.toFixed(2)} → 종료값: ${scfiEnd.toFixed(2)} (변동률: ${scfiChange}%)<br>`;
-            scfiAnalysis += `• 최고값: ${scfiMax.toFixed(2)} / 최저값: ${scfiMin.toFixed(2)}<br>`;
-            scfiAnalysis += `• 평균값: ${scfiAvg} / 표준편차: ${calculateStdDev(scfiData).toFixed(2)}`;
-            
-            // CCFI/HRCI 추가 분석
-            const ccfiChange = ((ccfiData[ccfiData.length - 1] - ccfiData[0]) / ccfiData[0] * 100).toFixed(1);
-            const hrciChange = ((hrciData[hrciData.length - 1] - hrciData[0]) / hrciData[0] * 100).toFixed(1);
-            
-            let summary = `<strong>종합 지수 변동:</strong><br>`;
-            summary += `• BDI: ${bdiChange}% / SCFI: ${scfiChange}%<br>`;
-            summary += `• CCFI: ${ccfiChange}% / HRCI: ${hrciChange}%<br>`;
-            summary += `• 전체 평균 변동률: ${((parseFloat(bdiChange) + parseFloat(scfiChange) + parseFloat(ccfiChange) + parseFloat(hrciChange)) / 4).toFixed(1)}%`;
-            
-            return { bdi: bdiAnalysis, scfi: scfiAnalysis, summary };
-        }
-        
-        // 표준편차 계산 함수
-        function calculateStdDev(values) {
-            const avg = values.reduce((a, b) => a + b, 0) / values.length;
-            const squareDiffs = values.map(value => Math.pow(value - avg, 2));
-            const avgSquareDiff = squareDiffs.reduce((a, b) => a + b, 0) / values.length;
-            return Math.sqrt(avgSquareDiff);
-        }
-        
-        // 주요 노선 분석 함수 - 수치 중심
-        function analyzeMainRoutes(start, points) {
             const origins = ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'];
-            const originNames = { shanghai: '상해', hongkong: '홍콩', shenzhen: '심천', hanoi: '하노이', hochiminh: '호치민' };
-            
-            // 북미 해상 운임 상세 분석
-            let usSeaAnalysis = '<strong>북미 해상 운임 상세 (USD/TEU):</strong><br>';
-            let usSeaData = {};
-            
             origins.forEach(origin => {
-                const laData = currentData.freight[origin].sea.la.slice(start);
-                const lbData = currentData.freight[origin].sea.longbeach.slice(start);
-                
-                if (laData.length > 1) {
-                    const laStart = laData[0];
-                    const laEnd = laData[laData.length - 1];
-                    const laAvg = (laData.reduce((a, b) => a + b, 0) / laData.length).toFixed(0);
-                    const laChange = ((laEnd - laStart) / laStart * 100).toFixed(1);
-                    
-                    usSeaData[origin] = { start: laStart, end: laEnd, avg: laAvg, change: laChange };
-                    usSeaAnalysis += `• ${originNames[origin]}→LA: ${laStart} → ${laEnd} (${laChange}%, 평균: ${laAvg})<br>`;
-                }
+                currentData.freight[origin] = {
+                    sea: { la: [], longbeach: [], rotterdam: [], kandla: [], paradip: [], jnpt: [] },
+                    air: { lax: [], jfk: [], vie: [], del: [], bom: [], blr: [] }
+                };
             });
             
-            // 유럽 해상 운임 상세 분석
-            let euSeaAnalysis = '<strong>유럽 해상 운임 상세 (USD/TEU):</strong><br>';
-            let euSeaData = {};
-            
-            origins.forEach(origin => {
-                const rotterdamData = currentData.freight[origin].sea.rotterdam.slice(start);
+            // 데이터 파싱
+            for (let i = 1; i < lines.length; i++) {
+                const cols = lines[i].split(',');
+                if (cols.length < 65) continue;
                 
-                if (rotterdamData.length > 1) {
-                    const start = rotterdamData[0];
-                    const end = rotterdamData[rotterdamData.length - 1];
-                    const max = Math.max(...rotterdamData);
-                    const min = Math.min(...rotterdamData);
-                    const avg = (rotterdamData.reduce((a, b) => a + b, 0) / rotterdamData.length).toFixed(0);
-                    const change = ((end - start) / start * 100).toFixed(1);
-                    
-                    euSeaData[origin] = { start, end, max, min, avg, change };
-                    euSeaAnalysis += `• ${originNames[origin]}→로테르담: ${start} → ${end} (${change}%)<br>`;
-                    euSeaAnalysis += `  최고: ${max} / 최저: ${min} / 평균: ${avg}<br>`;
-                }
-            });
-            
-            // 항공 운임 상세 분석
-            let airFreightAnalysis = '<strong>항공 운임 상세 (USD/kg):</strong><br>';
-            
-            origins.forEach(origin => {
-                const laxData = currentData.freight[origin].air.lax.slice(start);
-                const jfkData = currentData.freight[origin].air.jfk.slice(start);
+                currentData.dates.push(new Date(cols[0]));
+                currentData.indices.BDI.push(parseFloat(cols[1]) || 0);
+                currentData.indices.SCFI.push(parseFloat(cols[2]) || 0);
+                currentData.indices.CCFI.push(parseFloat(cols[3]) || 0);
+                currentData.indices.HRCI.push(parseFloat(cols[4]) || 0);
                 
-                if (laxData.length > 1) {
-                    const laxStart = laxData[0];
-                    const laxEnd = laxData[laxData.length - 1];
-                    const laxChange = ((laxEnd - laxStart) / laxStart * 100).toFixed(1);
+                let colIdx = 5;
+                origins.forEach(origin => {
+                    // 해상 운임
+                    currentData.freight[origin].sea.la.push(parseFloat(cols[colIdx++]) || 0);
+                    currentData.freight[origin].sea.longbeach.push(parseFloat(cols[colIdx++]) || 0);
+                    currentData.freight[origin].sea.rotterdam.push(parseFloat(cols[colIdx++]) || 0);
+                    currentData.freight[origin].sea.kandla.push(parseFloat(cols[colIdx++]) || 0);
+                    currentData.freight[origin].sea.paradip.push(parseFloat(cols[colIdx++]) || 0);
+                    currentData.freight[origin].sea.jnpt.push(parseFloat(cols[colIdx++]) || 0);
                     
-                    airFreightAnalysis += `• ${originNames[origin]}→LAX: ${laxStart.toFixed(2)} → ${laxEnd.toFixed(2)} (${laxChange}%)<br>`;
-                }
-            });
-            
-            // 운임 격차 분석
-            let gapAnalysis = '<strong>출발지별 운임 격차:</strong><br>';
-            if (Object.keys(usSeaData).length > 0) {
-                const avgRates = Object.values(usSeaData).map(d => parseFloat(d.avg));
-                const maxAvg = Math.max(...avgRates);
-                const minAvg = Math.min(...avgRates);
-                const gap = ((maxAvg - minAvg) / minAvg * 100).toFixed(1);
-                gapAnalysis += `• 북미 해상: 최고-최저 평균 운임 격차 ${gap}%<br>`;
-                gapAnalysis += `  (최고: ${maxAvg} / 최저: ${minAvg})<br>`;
+                    // 항공 운임
+                    currentData.freight[origin].air.lax.push(parseFloat(cols[colIdx++]) || 0);
+                    currentData.freight[origin].air.jfk.push(parseFloat(cols[colIdx++]) || 0);
+                    currentData.freight[origin].air.vie.push(parseFloat(cols[colIdx++]) || 0);
+                    currentData.freight[origin].air.del.push(parseFloat(cols[colIdx++]) || 0);
+                    currentData.freight[origin].air.bom.push(parseFloat(cols[colIdx++]) || 0);
+                    currentData.freight[origin].air.blr.push(parseFloat(cols[colIdx++]) || 0);
+                });
             }
             
-            if (Object.keys(euSeaData).length > 0) {
-                const avgRates = Object.values(euSeaData).map(d => parseFloat(d.avg));
-                const maxAvg = Math.max(...avgRates);
-                const minAvg = Math.min(...avgRates);
-                const gap = ((maxAvg - minAvg) / minAvg * 100).toFixed(1);
-                gapAnalysis += `• 유럽 해상: 최고-최저 평균 운임 격차 ${gap}%<br>`;
-                gapAnalysis += `  (최고: ${maxAvg} / 최저: ${minAvg})`;
-            }
-            
-            return {
-                usSeaShanghai: usSeaAnalysis,
-                usSeaPattern: gapAnalysis,
-                euSeaShanghai: euSeaAnalysis,
-                euSeaPattern: '',
-                airFreight: airFreightAnalysis,
-                airPattern: ''
-            };
+            console.log('CSV 파싱 완료:', currentData.dates.length, '개 데이터 포인트');
         }
-        
-        // 페이지 로드 시 초기화
-        // Firebase 데이터 로드 함수
-function loadFirebaseData(data) {
-    try {
-        console.log('Firebase 데이터 로드 시작...');
-        
-        // 데이터 유효성 검사
-        if (!data.data || !data.data.dates || !data.data.indices || !data.data.freight) {
-            console.error('데이터 구조가 올바르지 않습니다');
-            generateRealisticData(); // 로컬 데이터로 대체
-            return;
-        }
-        
-        // 날짜 문자열을 Date 객체로 안전하게 변환
-        currentData.dates = data.data.dates.map(d => {
-            if (d instanceof Date) return d;
-            if (typeof d === 'string') return new Date(d);
-            if (typeof d === 'number') return new Date(d);
-            return new Date(); // 기본값
-        });
-        
-        // 데이터 검증
-        if (currentData.dates.some(d => isNaN(d.getTime()))) {
-            console.error('날짜 변환 오류');
-            generateRealisticData(); // 로컬 데이터로 대체
-            return;
-        }
-        
-        currentData.indices = data.data.indices;
-        currentData.freight = data.data.freight;
-        
-        // UI 업데이트
-        updateUIWithData();
-        
-        // 동기화 상태 업데이트
-        const syncTime = new Date(data.timestamp);
-        document.getElementById('lastSyncTime').textContent = 
-            `마지막 동기화: ${syncTime.toLocaleString('ko-KR')}`;
-        document.getElementById('syncStatus').textContent = '✅ 데이터 동기화 완료';
-        document.getElementById('syncStatus').style.color = '#27ae60';
-        
-        console.log('데이터 동기화 완료');
-    } catch (error) {
-        console.error('데이터 로드 오류:', error);
-        document.getElementById('syncStatus').textContent = '❌ 데이터 로드 실패';
-        document.getElementById('syncStatus').style.color = '#e74c3c';
-        
-        // 오류 시 로컬 데이터 생성
-        generateRealisticData();
-    }
-}
-};
 
-// 데이터 로드 후 설정
-function setupAfterDataLoad() {
-    setupFileUpload();
-    updateCharts('1Y');
-    
-    // 다운로드 버튼 이벤트 리스너
-    document.getElementById('downloadBtn').addEventListener('click', downloadCurrentData);
-    document.getElementById('downloadBtnUser').addEventListener('click', downloadCurrentData);
-    
-    // 날짜 업데이트 버튼 이벤트 리스너
-    document.getElementById('updateDateBtn').addEventListener('click', updateRateDate);
-    
-    // 시간 범위 버튼 이벤트
-    document.querySelectorAll('.time-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            const range = this.getAttribute('data-range');
-            currentTimeRange = range;
-            updateMetricsForTimeRange(range);
-            updateCharts(range);
-            analyzeFreightChanges(range);
-        });
-    });
-    
-    // 날짜 선택기 초기화
-    updateDateSelector();
-    
-    // 초기 분석 실행
-    analyzeFreightChanges('1Y');
-    
-    // 초기 메트릭스 업데이트
-    updateMetricsForTimeRange('1Y');
-}
+        // ===== 초기화 =====
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('대시보드 초기화 시작');
+            
+            // 샘플 데이터 생성
+            generateSampleData();
+            
+            // UI 초기 업데이트
+            updateUI();
+            
+            // 파일 업로드 설정
             setupFileUpload();
-            updateCharts('1Y'); // 기본값 1년
             
-            // 다운로드 버튼 이벤트 리스너
-            document.getElementById('downloadBtn').addEventListener('click', downloadCurrentData);
-            document.getElementById('downloadBtnUser').addEventListener('click', downloadCurrentData);
-            
-            // 날짜 업데이트 버튼 이벤트 리스너
-            document.getElementById('updateDateBtn').addEventListener('click', updateRateDate);
-            
-            // 시간 범위 버튼 이벤트
+            // 이벤트 리스너 설정
+            // 시간 범위 버튼
             document.querySelectorAll('.time-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
                     document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
                     this.classList.add('active');
-                    const range = this.getAttribute('data-range');
-                    currentTimeRange = range; // 전역 변수 업데이트
-                    
-                    // 메트릭스 업데이트
-                    updateMetricsForTimeRange(range);
-                    
-                    // 차트 업데이트
-                    updateCharts(range);
-                    
-                    // 운임 변동 분석 업데이트
-                    analyzeFreightChanges(range);
-                    
-                    console.log('시간 범위 변경:', range);
+                    currentTimeRange = this.getAttribute('data-range');
+                    updateMetrics();
+                    updateCharts();
                 });
             });
             
-            // 날짜 선택기 초기화
-            updateDateSelector();
+            // 다운로드 버튼
+            document.getElementById('downloadBtn')?.addEventListener('click', downloadCSV);
+            document.getElementById('downloadBtnUser')?.addEventListener('click', downloadCSV);
             
-            // 초기 분석 실행
-            analyzeFreightChanges('1Y');
+            // 날짜 업데이트 버튼
+            document.getElementById('updateDateBtn')?.addEventListener('click', function() {
+                const lastIdx = currentData.dates.length - 1;
+                if (lastIdx >= 0) {
+                    document.getElementById('dateSelector').value = lastIdx;
+                    updateFreightTables(lastIdx);
+                    const lastDate = currentData.dates[lastIdx];
+                    document.getElementById('rateDate').textContent = 
+                        `(${lastDate.getFullYear()}년 ${lastDate.getMonth() + 1}월 ${lastDate.getDate()}일 기준)`;
+                }
+            });
             
-            // 초기 메트릭스 업데이트
-            updateMetricsForTimeRange('1Y');
-        };
+            // 관리자 모드 토글
+            document.getElementById('adminToggle')?.addEventListener('click', function() {
+                if (!isAdmin) {
+                    const password = prompt('관리자 비밀번호를 입력하세요:');
+                    if (password === 'mjl2025') {
+                        isAdmin = true;
+                        document.getElementById('adminSection').style.display = 'block';
+                        document.getElementById('userSection').style.display = 'none';
+                        this.textContent = '👤 사용자 모드';
+                        this.style.background = '#e74c3c';
+                        alert('관리자 모드가 활성화되었습니다.');
+                    } else {
+                        alert('비밀번호가 올바르지 않습니다.');
+                    }
+                } else {
+                    isAdmin = false;
+                    document.getElementById('adminSection').style.display = 'none';
+                    document.getElementById('userSection').style.display = 'block';
+                    this.textContent = '🔐 관리자 모드';
+                    this.style.background = '#95a5a6';
+                }
+            });
+            
+            // 출발지 선택 변경
+            document.getElementById('usSeaOriginSelect')?.addEventListener('change', updateUSSeaChart);
+            
+            console.log('대시보드 초기화 완료');
+        });
     </script>
 </body>
 </html>
