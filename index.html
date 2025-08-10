@@ -6,6 +6,10 @@
     <title>MJL 아시아발 글로벌 물류 운임 대시보드</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <style>
         * {
             margin: 0;
@@ -460,13 +464,38 @@
                 <div class="control-title">📂 데이터 업로드 및 관리</div>
                 <div class="control-grid">
                     <div>
-                        <div class="upload-area" id="uploadArea">
-                            <input type="file" id="fileInput" class="file-input" accept=".xlsx,.xls,.csv" />
-                            <div class="upload-text">📥 Excel/CSV 파일 업로드</div>
-                            <div class="upload-hint">클릭하거나 드래그 앤 드롭하세요</div>
+                        <div id="adminSection" style="display: none;">
+                            <div class="upload-area" id="uploadArea">
+                                <input type="file" id="fileInput" class="file-input" accept=".xlsx,.xls,.csv" />
+                                <div class="upload-text">📥 Excel/CSV 파일 업로드</div>
+                                <div class="upload-hint">관리자 전용 - 클릭하거나 드래그 앤 드롭</div>
+                            </div>
+                            <div id="fileInfo" class="file-info" style="display: none;"></div>
+                            <button class="download-btn" id="downloadBtn">📥 현재 데이터 CSV 다운로드</button>
                         </div>
-                        <div id="fileInfo" class="file-info" style="display: none;"></div>
-                        <button class="download-btn" id="downloadBtn">📥 현재 데이터 CSV 다운로드</button>
+                        
+                        <div id="userSection">
+                            <div style="background: #e8f4f8; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                                <div style="font-weight: 600; color: #2c3e50; margin-bottom: 8px;">
+                                    🔄 실시간 데이터 동기화
+                                </div>
+                                <div style="color: #7f8c8d; font-size: 0.9em;" id="syncStatus">
+                                    데이터가 자동으로 업데이트됩니다
+                                </div>
+                                <div style="margin-top: 10px;">
+                                    <span id="lastSyncTime" style="font-size: 0.85em; color: #95a5a6;">
+                                        마지막 동기화: -
+                                    </span>
+                                </div>
+                            </div>
+                            <button class="download-btn" id="downloadBtnUser">📥 현재 데이터 CSV 다운로드</button>
+                        </div>
+                        
+                        <div style="margin-top: 15px;">
+                            <button id="adminToggle" style="padding: 8px 15px; background: #95a5a6; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 0.85em;">
+                                🔐 관리자 모드
+                            </button>
+                        </div>
                     </div>
                     
                     <div>
@@ -802,6 +831,152 @@
     </div>
 
     <script>
+        // Firebase 설정 (실제 사용 시 본인의 Firebase 프로젝트 정보로 교체 필요)
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            databaseURL: "YOUR_DATABASE_URL",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+        
+        // Firebase 초기화 체크
+        let firebaseEnabled = false;
+        let database = null;
+        let isAdmin = false;
+        
+        // Firebase 초기화 시도
+        try {
+            if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+                firebase.initializeApp(firebaseConfig);
+                database = firebase.database();
+                firebaseEnabled = true;
+                console.log('Firebase 연결 성공');
+                
+                // 실시간 데이터 리스너 설정
+                setupRealtimeListener();
+            } else {
+                console.log('Firebase 설정 필요 - 로컬 모드로 실행');
+                document.getElementById('syncStatus').textContent = '로컬 모드 - Firebase 설정 필요';
+                document.getElementById('syncStatus').style.color = '#e74c3c';
+            }
+        } catch (error) {
+            console.error('Firebase 초기화 실패:', error);
+            firebaseEnabled = false;
+        }
+        
+        // 실시간 데이터 리스너
+        function setupRealtimeListener() {
+            if (!database) return;
+            
+            const dataRef = database.ref('freightData/latest');
+            
+            dataRef.on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data && data.data) {
+                    console.log('실시간 데이터 수신');
+                    
+                    // 받은 데이터를 currentData에 적용
+                    if (data.data.dates && data.data.indices && data.data.freight) {
+                        // 날짜 문자열을 Date 객체로 변환
+                        currentData.dates = data.data.dates.map(d => new Date(d));
+                        currentData.indices = data.data.indices;
+                        currentData.freight = data.data.freight;
+                        
+                        // UI 업데이트
+                        updateUIWithData();
+                        
+                        // 동기화 상태 업데이트
+                        const syncTime = new Date(data.timestamp);
+                        document.getElementById('lastSyncTime').textContent = 
+                            `마지막 동기화: ${syncTime.toLocaleString('ko-KR')}`;
+                        document.getElementById('syncStatus').textContent = '✅ 데이터 동기화 완료';
+                        document.getElementById('syncStatus').style.color = '#27ae60';
+                    }
+                }
+            });
+            
+            dataRef.on('child_changed', () => {
+                console.log('데이터 변경 감지');
+                document.getElementById('syncStatus').textContent = '🔄 데이터 업데이트 중...';
+                document.getElementById('syncStatus').style.color = '#f39c12';
+            });
+        }
+        
+        // 데이터를 Firebase에 업로드
+        function uploadDataToFirebase() {
+            if (!database || !isAdmin) {
+                alert('관리자 권한이 필요합니다.');
+                return;
+            }
+            
+            const dataToUpload = {
+                data: currentData,
+                timestamp: Date.now(),
+                uploadedBy: 'admin',
+                version: '1.0'
+            };
+            
+            database.ref('freightData/latest').set(dataToUpload)
+                .then(() => {
+                    console.log('데이터 업로드 성공');
+                    alert('데이터가 성공적으로 업로드되었습니다. 모든 사용자에게 반영됩니다.');
+                })
+                .catch((error) => {
+                    console.error('데이터 업로드 실패:', error);
+                    alert('데이터 업로드 실패: ' + error.message);
+                });
+        }
+        
+        // UI 업데이트 함수
+        function updateUIWithData() {
+            if (currentData.dates.length > 0) {
+                const lastIdx = currentData.dates.length - 1;
+                
+                // 메트릭스 업데이트
+                updateMetricsForTimeRange(currentTimeRange);
+                
+                // 운임 테이블 업데이트
+                updateFreightTables(lastIdx);
+                
+                // 날짜 선택기 업데이트
+                updateDateSelector();
+                
+                // 상단 데이터 상태 업데이트
+                updateDataStatus(lastIdx);
+                
+                // 차트 업데이트
+                updateCharts(currentTimeRange);
+                
+                // 분석 업데이트
+                analyzeFreightChanges(currentTimeRange);
+            }
+        }
+        
+        // 관리자 모드 토글
+        document.getElementById('adminToggle').addEventListener('click', function() {
+            const password = prompt('관리자 비밀번호를 입력하세요:');
+            
+            // 간단한 비밀번호 체크 (실제 운영 시 서버 인증 필요)
+            if (password === 'mjl2025admin') {
+                isAdmin = true;
+                document.getElementById('adminSection').style.display = 'block';
+                document.getElementById('userSection').style.display = 'none';
+                this.textContent = '👤 사용자 모드';
+                this.style.background = '#e74c3c';
+                alert('관리자 모드가 활성화되었습니다.');
+            } else if (isAdmin) {
+                isAdmin = false;
+                document.getElementById('adminSection').style.display = 'none';
+                document.getElementById('userSection').style.display = 'block';
+                this.textContent = '🔐 관리자 모드';
+                this.style.background = '#95a5a6';
+            } else {
+                alert('비밀번호가 올바르지 않습니다.');
+            }
+        });
         // 전역 데이터 객체
         const currentData = {
             dates: [],
@@ -1370,6 +1545,11 @@
                     
                     // 상단 데이터 상태 업데이트
                     updateDataStatus(lastIdx);
+                    
+                    // Firebase에 데이터 업로드 (관리자인 경우)
+                    if (firebaseEnabled && isAdmin) {
+                        uploadDataToFirebase();
+                    }
                     
                     // 날짜 선택기 업데이트
                     updateDateSelector();
@@ -2215,6 +2395,7 @@
             
             // 다운로드 버튼 이벤트 리스너
             document.getElementById('downloadBtn').addEventListener('click', downloadCurrentData);
+            document.getElementById('downloadBtnUser').addEventListener('click', downloadCurrentData);
             
             // 날짜 업데이트 버튼 이벤트 리스너
             document.getElementById('updateDateBtn').addEventListener('click', updateRateDate);
