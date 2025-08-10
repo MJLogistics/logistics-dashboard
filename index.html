@@ -2389,7 +2389,65 @@
         
         // 페이지 로드 시 초기화
         window.onload = function() {
+    // Firebase 데이터 먼저 확인
+    if (firebaseEnabled && database) {
+        console.log('Firebase 데이터 확인 중...');
+        database.ref('freightData/latest').once('value').then(snapshot => {
+            const data = snapshot.val();
+            if (data && data.data) {
+                console.log('Firebase 데이터 로드');
+                loadFirebaseData(data);
+            } else {
+                console.log('Firebase 데이터 없음, 로컬 데이터 생성');
+                generateRealisticData();
+                setupAfterDataLoad();
+            }
+        }).catch(error => {
+            console.error('Firebase 로드 실패:', error);
             generateRealisticData();
+            setupAfterDataLoad();
+        });
+    } else {
+        console.log('Firebase 비활성화, 로컬 데이터 생성');
+        generateRealisticData();
+        setupAfterDataLoad();
+    }
+};
+
+// 데이터 로드 후 설정
+function setupAfterDataLoad() {
+    setupFileUpload();
+    updateCharts('1Y');
+    
+    // 다운로드 버튼 이벤트 리스너
+    document.getElementById('downloadBtn').addEventListener('click', downloadCurrentData);
+    document.getElementById('downloadBtnUser').addEventListener('click', downloadCurrentData);
+    
+    // 날짜 업데이트 버튼 이벤트 리스너
+    document.getElementById('updateDateBtn').addEventListener('click', updateRateDate);
+    
+    // 시간 범위 버튼 이벤트
+    document.querySelectorAll('.time-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            const range = this.getAttribute('data-range');
+            currentTimeRange = range;
+            updateMetricsForTimeRange(range);
+            updateCharts(range);
+            analyzeFreightChanges(range);
+        });
+    });
+    
+    // 날짜 선택기 초기화
+    updateDateSelector();
+    
+    // 초기 분석 실행
+    analyzeFreightChanges('1Y');
+    
+    // 초기 메트릭스 업데이트
+    updateMetricsForTimeRange('1Y');
+}
             setupFileUpload();
             updateCharts('1Y'); // 기본값 1년
             
