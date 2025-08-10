@@ -1440,134 +1440,111 @@
             }
         }
 
-        function parseCSV(csvText) {
-            try {
-                // CSV 파싱
-                const lines = csvText.split('\n').filter(line => line.trim());
-                if (lines.length < 2) {
-                    throw new Error('CSV 파일에 데이터가 부족합니다.');
-                }
+function parseCSV(csvText) {
+    try {
+        // CSV 파싱
+        const lines = csvText.split('\n').filter(line => line.trim());
+        if (lines.length < 2) {
+            throw new Error('CSV 파일에 데이터가 부족합니다.');
+        }
+        
+        // 데이터 초기화
+        currentData.dates = [];
+        currentData.indices = { BDI: [], SCFI: [], CCFI: [], HRCI: [] };
+        
+        // 각 출발지별 초기화
+        const origins = ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'];
+        origins.forEach(origin => {
+            currentData.freight[origin] = {
+                sea: { la: [], longbeach: [], rotterdam: [], kandla: [], paradip: [], jnpt: [] },
+                air: { lax: [], jfk: [], vie: [], del: [], bom: [], blr: [] }
+            };
+        });
+        
+        // 헤더 스킵하고 데이터 파싱
+        for (let i = 1; i < lines.length; i++) {
+            const cols = lines[i].split(',');
+            if (cols.length < 65) continue; // 데이터가 부족한 행은 스킵
+            
+            // 날짜 파싱 (유효성 검사 추가)
+            const dateStr = cols[0].trim();
+            const date = new Date(dateStr);
+            
+            if (isNaN(date.getTime())) {
+                console.warn(`잘못된 날짜 형식: ${dateStr}`);
+                continue;
+            }
+            
+            currentData.dates.push(date);
+            
+            // 지수 데이터 파싱 (숫자 검증)
+            currentData.indices.BDI.push(parseFloat(cols[1]) || 0);
+            currentData.indices.SCFI.push(parseFloat(cols[2]) || 0);
+            currentData.indices.CCFI.push(parseFloat(cols[3]) || 0);
+            currentData.indices.HRCI.push(parseFloat(cols[4]) || 0);
+            
+            // 운임 데이터 파싱
+            let colIdx = 5;
+            origins.forEach(origin => {
+                // 해상 운임 (6개 도착지)
+                currentData.freight[origin].sea.la.push(parseFloat(cols[colIdx++]) || 0);
+                currentData.freight[origin].sea.longbeach.push(parseFloat(cols[colIdx++]) || 0);
+                currentData.freight[origin].sea.rotterdam.push(parseFloat(cols[colIdx++]) || 0);
+                currentData.freight[origin].sea.kandla.push(parseFloat(cols[colIdx++]) || 0);
+                currentData.freight[origin].sea.paradip.push(parseFloat(cols[colIdx++]) || 0);
+                currentData.freight[origin].sea.jnpt.push(parseFloat(cols[colIdx++]) || 0);
                 
-                // 데이터 초기화
-                currentData.dates = [];
-                currentData.indices = { BDI: [], SCFI: [], CCFI: [], HRCI: [] };
-                
-                // 각 출발지별 초기화
-                const origins = ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'];
-                origins.forEach(origin => {
-                    currentData.freight[origin] = {
-                        sea: { la: [], longbeach: [], rotterdam: [], kandla: [], paradip: [], jnpt: [] },
-                        air: { lax: [], jfk: [], vie: [], del: [], bom: [], blr: [] }
-                    };
-                });
-                
-                // 헤더 스킵하고 데이터 파싱
-                for (let i = 1; i < lines.length; i++) {
-                    const cols = lines[i].split(',');
-                    if (cols.length < 65) continue; // 데이터가 부족한 행은 스킵
-                    
-                    // 날짜 파싱
-                    currentData.dates.push(new Date(cols[0]));
-                    
-                    // 지수 데이터 파싱
-                    currentData.indices.BDI.push(parseFloat(cols[1]) || 0);
-                    currentData.indices.SCFI.push(parseFloat(cols[2]) || 0);
-                    currentData.indices.CCFI.push(parseFloat(cols[3]) || 0);
-                    currentData.indices.HRCI.push(parseFloat(cols[4]) || 0);
-                    
-                    // 운임 데이터 파싱
-                    let colIdx = 5;
-                    origins.forEach(origin => {
-                        // 해상 운임 (6개 도착지)
-                        currentData.freight[origin].sea.la.push(parseFloat(cols[colIdx++]) || 0);
-                        currentData.freight[origin].sea.longbeach.push(parseFloat(cols[colIdx++]) || 0);
-                        currentData.freight[origin].sea.rotterdam.push(parseFloat(cols[colIdx++]) || 0);
-                        currentData.freight[origin].sea.kandla.push(parseFloat(cols[colIdx++]) || 0);
-                        currentData.freight[origin].sea.paradip.push(parseFloat(cols[colIdx++]) || 0);
-                        currentData.freight[origin].sea.jnpt.push(parseFloat(cols[colIdx++]) || 0);
-                        
-                        // 항공 운임 (6개 도착지)
-                        currentData.freight[origin].air.lax.push(parseFloat(cols[colIdx++]) || 0);
-                        currentData.freight[origin].air.jfk.push(parseFloat(cols[colIdx++]) || 0);
-                        currentData.freight[origin].air.vie.push(parseFloat(cols[colIdx++]) || 0);
-                        currentData.freight[origin].air.del.push(parseFloat(cols[colIdx++]) || 0);
-                        currentData.freight[origin].air.bom.push(parseFloat(cols[colIdx++]) || 0);
-                        currentData.freight[origin].air.blr.push(parseFloat(cols[colIdx++]) || 0);
-                    });
-                }
-                
-                // 최신 데이터로 메트릭스 카드 업데이트
-                if (currentData.dates.length > 0) {
-                    const lastIdx = currentData.dates.length - 1;
-                    const prevIdx = Math.max(0, lastIdx - 1);
-                    
-                    // BDI 업데이트
-                    const bdiValue = currentData.indices.BDI[lastIdx];
-                    const bdiPrev = currentData.indices.BDI[prevIdx];
-                    const bdiChange = ((bdiValue - bdiPrev) / bdiPrev * 100).toFixed(1);
-                    document.querySelector('.metric-card:nth-child(1) .metric-value').textContent = bdiValue.toLocaleString();
-                    const bdiChangeEl = document.querySelector('.metric-card:nth-child(1) .metric-change');
-                    bdiChangeEl.textContent = `${bdiChange > 0 ? '▲' : '▼'} ${Math.abs(bdiChange)}%`;
-                    bdiChangeEl.className = `metric-change ${bdiChange > 0 ? 'positive' : 'negative'}`;
-                    
-                    // SCFI 업데이트
-                    const scfiValue = currentData.indices.SCFI[lastIdx];
-                    const scfiPrev = currentData.indices.SCFI[prevIdx];
-                    const scfiChange = ((scfiValue - scfiPrev) / scfiPrev * 100).toFixed(1);
-                    document.querySelector('.metric-card:nth-child(2) .metric-value').textContent = scfiValue.toFixed(2);
-                    const scfiChangeEl = document.querySelector('.metric-card:nth-child(2) .metric-change');
-                    scfiChangeEl.textContent = `${scfiChange > 0 ? '▲' : '▼'} ${Math.abs(scfiChange)}%`;
-                    scfiChangeEl.className = `metric-change ${scfiChange > 0 ? 'positive' : 'negative'}`;
-                    
-                    // CCFI 업데이트
-                    const ccfiValue = currentData.indices.CCFI[lastIdx];
-                    const ccfiPrev = currentData.indices.CCFI[prevIdx];
-                    const ccfiChange = ((ccfiValue - ccfiPrev) / ccfiPrev * 100).toFixed(1);
-                    document.querySelector('.metric-card:nth-child(3) .metric-value').textContent = ccfiValue.toFixed(2);
-                    const ccfiChangeEl = document.querySelector('.metric-card:nth-child(3) .metric-change');
-                    ccfiChangeEl.textContent = `${ccfiChange > 0 ? '▲' : '▼'} ${Math.abs(ccfiChange)}%`;
-                    ccfiChangeEl.className = `metric-change ${ccfiChange > 0 ? 'positive' : 'negative'}`;
-                    
-                    // HRCI 업데이트
-                    const hrciValue = currentData.indices.HRCI[lastIdx];
-                    const hrciPrev = currentData.indices.HRCI[prevIdx];
-                    const hrciChange = ((hrciValue - hrciPrev) / hrciPrev * 100).toFixed(1);
-                    document.querySelector('.metric-card:nth-child(4) .metric-value').textContent = hrciValue.toFixed(1);
-                    const hrciChangeEl = document.querySelector('.metric-card:nth-child(4) .metric-change');
-                    hrciChangeEl.textContent = `${hrciChange > 0 ? '▲' : '▼'} ${Math.abs(hrciChange)}%`;
-                    hrciChangeEl.className = `metric-change ${hrciChange > 0 ? 'positive' : 'negative'}`;
-                    
-                    // 운임 테이블 업데이트
-                    updateFreightTables(lastIdx);
-                    
-                    // 날짜 선택기 업데이트
-                    updateDateSelector();
-                    
-                    // 상단 데이터 상태 업데이트
-                    updateDataStatus(lastIdx);
-                    
-                    // Firebase에 데이터 업로드 (관리자인 경우)
-                    if (firebaseEnabled && isAdmin) {
-                        uploadDataToFirebase();
-                    }
-                    
-                    // 날짜 선택기 업데이트
-                    updateDateSelector();
-                    
-                    // 상단 데이터 상태 업데이트
-                    updateDataStatus(lastIdx);
-                }
-                
-                // 차트 업데이트
-                updateCharts(currentTimeRange);
-                analyzeFreightChanges(currentTimeRange);
-                
-                console.log('CSV 파싱 완료:', currentData.dates.length, '개 데이터 포인트');
-            } catch (error) {
-                console.error('CSV 파싱 오류:', error);
-                throw error;
+                // 항공 운임 (6개 도착지)
+                currentData.freight[origin].air.lax.push(parseFloat(cols[colIdx++]) || 0);
+                currentData.freight[origin].air.jfk.push(parseFloat(cols[colIdx++]) || 0);
+                currentData.freight[origin].air.vie.push(parseFloat(cols[colIdx++]) || 0);
+                currentData.freight[origin].air.del.push(parseFloat(cols[colIdx++]) || 0);
+                currentData.freight[origin].air.bom.push(parseFloat(cols[colIdx++]) || 0);
+                currentData.freight[origin].air.blr.push(parseFloat(cols[colIdx++]) || 0);
+            });
+        }
+        
+        // 데이터가 제대로 파싱되었는지 확인
+        if (currentData.dates.length === 0) {
+            throw new Error('유효한 데이터가 없습니다.');
+        }
+        
+        // UI 업데이트
+        if (currentData.dates.length > 0) {
+            const lastIdx = currentData.dates.length - 1;
+            
+            // 메트릭스 업데이트
+            updateMetricsForTimeRange(currentTimeRange);
+            
+            // 운임 테이블 업데이트
+            updateFreightTables(lastIdx);
+            
+            // 날짜 선택기 업데이트
+            updateDateSelector();
+            
+            // 상단 데이터 상태 업데이트
+            updateDataStatus(lastIdx);
+            
+            // Firebase에 데이터 업로드 (관리자인 경우)
+            if (firebaseEnabled && isAdmin) {
+                uploadDataToFirebase();
             }
         }
+        
+        // 차트 업데이트
+        updateCharts(currentTimeRange);
+        analyzeFreightChanges(currentTimeRange);
+        
+        console.log('CSV 파싱 완료:', currentData.dates.length, '개 데이터 포인트');
+    } catch (error) {
+        console.error('CSV 파싱 오류:', error);
+        alert('CSV 파일 처리 중 오류가 발생했습니다.\n' + error.message);
+        
+        // 오류 시 로컬 데이터 생성
+        generateRealisticData();
+        updateCharts(currentTimeRange);
+    }
+}
         
         // 운임 테이블 업데이트 함수
         function updateFreightTables(idx) {
@@ -2388,30 +2365,56 @@
         }
         
         // 페이지 로드 시 초기화
-        window.onload = function() {
-    // Firebase 데이터 먼저 확인
-    if (firebaseEnabled && database) {
-        console.log('Firebase 데이터 확인 중...');
-        database.ref('freightData/latest').once('value').then(snapshot => {
-            const data = snapshot.val();
-            if (data && data.data) {
-                console.log('Firebase 데이터 로드');
-                loadFirebaseData(data);
-            } else {
-                console.log('Firebase 데이터 없음, 로컬 데이터 생성');
-                generateRealisticData();
-                setupAfterDataLoad();
-            }
-        }).catch(error => {
-            console.error('Firebase 로드 실패:', error);
-            generateRealisticData();
-            setupAfterDataLoad();
+        // Firebase 데이터 로드 함수
+function loadFirebaseData(data) {
+    try {
+        console.log('Firebase 데이터 로드 시작...');
+        
+        // 데이터 유효성 검사
+        if (!data.data || !data.data.dates || !data.data.indices || !data.data.freight) {
+            console.error('데이터 구조가 올바르지 않습니다');
+            generateRealisticData(); // 로컬 데이터로 대체
+            return;
+        }
+        
+        // 날짜 문자열을 Date 객체로 안전하게 변환
+        currentData.dates = data.data.dates.map(d => {
+            if (d instanceof Date) return d;
+            if (typeof d === 'string') return new Date(d);
+            if (typeof d === 'number') return new Date(d);
+            return new Date(); // 기본값
         });
-    } else {
-        console.log('Firebase 비활성화, 로컬 데이터 생성');
+        
+        // 데이터 검증
+        if (currentData.dates.some(d => isNaN(d.getTime()))) {
+            console.error('날짜 변환 오류');
+            generateRealisticData(); // 로컬 데이터로 대체
+            return;
+        }
+        
+        currentData.indices = data.data.indices;
+        currentData.freight = data.data.freight;
+        
+        // UI 업데이트
+        updateUIWithData();
+        
+        // 동기화 상태 업데이트
+        const syncTime = new Date(data.timestamp);
+        document.getElementById('lastSyncTime').textContent = 
+            `마지막 동기화: ${syncTime.toLocaleString('ko-KR')}`;
+        document.getElementById('syncStatus').textContent = '✅ 데이터 동기화 완료';
+        document.getElementById('syncStatus').style.color = '#27ae60';
+        
+        console.log('데이터 동기화 완료');
+    } catch (error) {
+        console.error('데이터 로드 오류:', error);
+        document.getElementById('syncStatus').textContent = '❌ 데이터 로드 실패';
+        document.getElementById('syncStatus').style.color = '#e74c3c';
+        
+        // 오류 시 로컬 데이터 생성
         generateRealisticData();
-        setupAfterDataLoad();
     }
+}
 };
 
 // 데이터 로드 후 설정
