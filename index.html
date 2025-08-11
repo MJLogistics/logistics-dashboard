@@ -250,6 +250,24 @@
   </div>
 
   <script>
+const WEB_APP_URL='https://script.google.com/macros/s/AKfycbzMb5jrh7SpUdTaaKAMxw_ds22V9f5vdGWkunsmtOxeoKdrSqzTElqGsZ1v8EgPWMo/exec';
+function handleGoogleSheetsData(r){
+  console.log('JSONP OK', r && r.status, r && r.meta);
+  document.getElementById('updateTime').textContent = '마지막 업데이트: ' + new Date().toLocaleString('ko-KR');
+  document.getElementById('syncText').textContent = (r && r.status)==='success' ? '동기화 완료' : '데이터 오류';
+}
+(function(){
+  const s=document.createElement('script');
+  s.id='sheets-data-script';
+  s.src=WEB_APP_URL+'?callback=handleGoogleSheetsData&_='+Date.now();
+  document.body.appendChild(s);
+})();
+</script>
+
+  
+  <!--
+
+  <script>
     // ===== 설정(Apps Script) =====
 const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwpaQCESa74kXX9A4urQY-uLegFJRNyu1wqIIPRji3SzdsasRjETSwuBUzV_rpM2FoK/exec';
 '; // 
@@ -558,5 +576,6 @@ const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwpaQCESa74kXX9A4ur
     });
     window.addEventListener('beforeunload', ()=>{ if(refreshTimer) clearInterval(refreshTimer); });
   </script>
+  
 </body>
 </html>
