@@ -581,55 +581,5 @@
 
     window.addEventListener('beforeunload', ()=>{ if(refreshTimer) clearInterval(refreshTimer); });
   </script>
-  <script>
-(function(){
-  // === Apps Script JSONP 엔드포인트 (정확히 붙여넣기) ===
-  const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzMb5jrh7SpUdTaaKAMxw_ds22V9f5vdGWkunsmtOxeoKdrSqzTElqGsZ1v8EgPWMo/exec';
-
-  // JSONP 콜백 (전역에 심어야 하므로 window에 할당)
-  window.handleGoogleSheetsData = function(result){
-    try{
-      if(result && result.status === 'success'){
-        console.log('[JSONP] rows=', result.meta?.rows, 'cols=', result.meta?.cols);
-        const now = new Date();
-        const el = document.getElementById('updateTime');
-        if (el) el.textContent = '마지막 업데이트: ' + now.toLocaleString('ko-KR');
-        const sync = document.getElementById('syncStatus');
-        if (sync) sync.innerHTML = '<span id="syncText">동기화 완료</span>';
-      }else{
-        console.error('[JSONP] error:', result);
-        const sync = document.getElementById('syncStatus');
-        if (sync) sync.innerHTML = '<span id="syncText">데이터 오류</span>';
-      }
-    }catch(e){
-      console.error('callback error', e);
-    }
-  };
-
-  function loadJSONP(){
-    // 기존 스크립트 제거
-    const old = document.getElementById('sheets-data-script');
-    if (old) old.remove();
-
-    // JSONP 스크립트 주입
-    const s = document.createElement('script');
-    s.id = 'sheets-data-script';
-    s.src = WEB_APP_URL + '?callback=handleGoogleSheetsData&_=' + Date.now();
-    s.onerror = function(){
-      console.error('JSONP 로드 실패');
-      const sync = document.getElementById('syncStatus');
-      if (sync) sync.innerHTML = '<span id="syncText">연결 실패</span>';
-    };
-    document.body.appendChild(s);
-  }
-
-  // DOM 준비되면 호출
-  if (document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', loadJSONP);
-  } else {
-    loadJSONP();
-  }
-})();
-</script>
 </body>
 </html>
