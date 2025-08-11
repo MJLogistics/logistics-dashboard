@@ -796,7 +796,7 @@
     <script>
         // ==================== 설정 ====================
         // 실제 Google Apps Script 웹 앱 URL로 변경하세요
-        const WEB_APP_URL = 'YOUR_ACTUAL_WEB_APP_URL_HERE';
+        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzUBdFZB3HXbdWAR-pV96DCHPvhWoDTt0-2L4qCMx6EwPlgvz_50tO-XxgRugg2Il-k/exec';
         
         // 자동 새로고침 간격 (5분)
         const REFRESH_INTERVAL = 5 * 60 * 1000;
@@ -866,7 +866,7 @@
         };
 
         function loadDataFromGoogleSheets() {
-            if (WEB_APP_URL === 'YOUR_ACTUAL_WEB_APP_URL_HERE') {
+            if (WEB_APP_URL === 'https://script.google.com/macros/s/AKfycbzUBdFZB3HXbdWAR-pV96DCHPvhWoDTt0-2L4qCMx6EwPlgvz_50tO-XxgRugg2Il-k/exec') {
                 updateSyncStatus('error', '웹앱 URL이 설정되지 않음');
                 alert('실제 Google Apps Script 웹앱 URL을 설정해주세요.\n\n설정 방법:\n1. Google Apps Script에서 제공된 코드를 배포\n2. 생성된 웹앱 URL을 WEB_APP_URL 변수에 입력');
                 return;
@@ -885,7 +885,7 @@
                 // JSONP 방식으로 데이터 로드
                 const script = document.createElement('script');
                 script.id = 'sheets-data-script';
-                script.src = `${WEB_APP_URL}?callback=handleGoogleSheetsData&type=dashboard&t=${Date.now()}`;
+                script.src = `${https://script.google.com/macros/s/AKfycbzUBdFZB3HXbdWAR-pV96DCHPvhWoDTt0-2L4qCMx6EwPlgvz_50tO-XxgRugg2Il-k/exec}?callback=handleGoogleSheetsData&type=dashboard&t=${Date.now()}`;
                 
                 script.onerror = function() {
                     console.error('스크립트 로드 실패');
@@ -1771,13 +1771,13 @@
             
             // 5초 후 실제 데이터 연동 시도 (백그라운드)
             setTimeout(() => {
-                if (WEB_APP_URL !== 'YOUR_ACTUAL_WEB_APP_URL_HERE') {
+                if (WEB_APP_URL !== 'https://script.google.com/macros/s/AKfycbzUBdFZB3HXbdWAR-pV96DCHPvhWoDTt0-2L4qCMx6EwPlgvz_50tO-XxgRugg2Il-k/exec') {
                     loadDataFromGoogleSheets();
                 }
             }, 5000);
             
             // 자동 새로고침 설정 (실제 URL이 설정된 경우에만)
-            if (WEB_APP_URL !== 'YOUR_ACTUAL_WEB_APP_URL_HERE') {
+            if (WEB_APP_URL !== 'https://script.google.com/macros/s/AKfycbzUBdFZB3HXbdWAR-pV96DCHPvhWoDTt0-2L4qCMx6EwPlgvz_50tO-XxgRugg2Il-k/exec') {
                 refreshTimer = setInterval(() => {
                     loadDataFromGoogleSheets();
                 }, REFRESH_INTERVAL);
