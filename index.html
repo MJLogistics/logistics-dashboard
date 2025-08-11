@@ -1,585 +1,370 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>MJL 아시아발 글로벌 물류 운임 대시보드</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    /* ===== 스타일(요약) – 원래 느낌 유지 ===== */
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:linear-gradient(135deg,#1e3c72 0%,#2a5298 100%);min-height:100vh;padding:20px}
-    .dashboard{max-width:1920px;margin:0 auto;background:rgba(255,255,255,.98);border-radius:20px;padding:30px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
-    .header{text-align:center;margin-bottom:30px;padding-bottom:20px;border-bottom:3px solid #e0e0e0}
-    h1{color:#2c3e50;font-size:2.5em;margin-bottom:10px;background:linear-gradient(135deg,#e74c3c,#c0392b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:bold}
-    .subtitle{color:#7f8c8d;font-size:1.2em;margin-bottom:15px}
-    .update-info{display:flex;justify-content:center;gap:20px;margin-top:10px;flex-wrap:wrap}
-    .update-time{color:#7f8c8d;font-size:.9em}
-    .data-status{background:#e74c3c;color:#fff;padding:3px 10px;border-radius:15px;font-size:.85em}
-    .sync-status{background:#27ae60;color:#fff;padding:3px 10px;border-radius:15px;font-size:.85em;display:inline-flex;align-items:center;gap:5px}
-    .sync-status.syncing{background:#f39c12}
-    .sync-status.error{background:#e74c3c}
-    .spinner{display:inline-block;width:12px;height:12px;border:2px solid #fff;border-top:2px solid transparent;border-radius:50%;animation:spin 1s linear infinite}
-    @keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
-    .control-panel{background:linear-gradient(135deg,#ffeaa7 0%,#fdcb6e 100%);padding:20px;border-radius:15px;margin-bottom:25px}
-    .time-range-buttons{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
-    .time-btn{padding:8px 16px;border:2px solid #e74c3c;background:#fff;color:#e74c3c;border-radius:8px;cursor:pointer;font-weight:600;transition:.2s}
-    .time-btn.active{background:#e74c3c;color:#fff}
-    .metrics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;margin-bottom:30px}
-    .metric-card{background:#fff;border-radius:15px;padding:20px;box-shadow:0 5px 15px rgba(0,0,0,.08);border-top:4px solid}
-    .metric-card:nth-child(1){border-top-color:#3498db}.metric-card:nth-child(2){border-top-color:#e74c3c}
-    .metric-card:nth-child(3){border-top-color:#f39c12}.metric-card:nth-child(4){border-top-color:#2ecc71}
-    .metric-title{font-size:.9em;color:#7f8c8d;font-weight:600;margin-bottom:10px}
-    .metric-value{font-size:2.2em;font-weight:bold;color:#2c3e50;margin-bottom:10px}
-    .metric-change{font-size:1em;padding:5px 10px;border-radius:12px;display:inline-block;font-weight:600}
-    .positive{color:#27ae60;background:rgba(39,174,96,.1)} .negative{color:#e74c3c;background:rgba(231,76,60,.1)}
-    .freight-table{background:#fff;border-radius:15px;padding:20px;box-shadow:0 5px 15px rgba(0,0,0,.08);margin-bottom:30px}
-    .freight-table table{width:100%;border-collapse:collapse;font-size:.9em}
-    .freight-table th,.freight-table td{padding:10px 8px;text-align:center;border:1px solid #e0e0e0;white-space:nowrap}
-    .freight-table th{background:#e74c3c;color:#fff;font-weight:600}
-    .origin-header{background:#34495e!important}
-    .destination-header{background:#2c3e50!important;font-size:.85em}
-    .chart-container{background:#fff;border-radius:15px;padding:20px;box-shadow:0 5px 15px rgba(0,0,0,.08)}
-    .charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(500px,1fr));gap:30px;margin-bottom:30px}
-    .chart-title{font-size:1.3em;color:#2c3e50;margin-bottom:15px;font-weight:600}
-    .filters{display:flex;gap:10px;align-items:center;margin:10px 0 0 0;flex-wrap:wrap}
-    @media(max-width:768px){.charts-grid{grid-template-columns:1fr} h1{font-size:1.8em}}
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MJL 아시아발 글로벌 물류 운임 대시보드</title>
+<style>
+  /* ====== 가벼운 스타일 (CSS 의존 이슈 최소화) ====== */
+  :root{
+    --primary:#e74c3c; --bg:#1e3c72; --bg2:#2a5298; --card:#fff;
+    --muted:#7f8c8d; --text:#2c3e50; --ok:#27ae60; --warn:#f39c12;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+       background:linear-gradient(135deg,var(--bg) 0%,var(--bg2) 100%);min-height:100vh;padding:20px;color:var(--text)}
+  .wrap{max-width:1200px;margin:0 auto;background:rgba(255,255,255,.98);border-radius:18px;box-shadow:0 16px 48px rgba(0,0,0,.3);padding:26px}
+  h1{font-size:28px;line-height:1.3;margin-bottom:8px;background:linear-gradient(135deg,#e74c3c,#c0392b);
+     -webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:800}
+  .subtitle{color:var(--muted);margin-bottom:12px}
+  .bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .pill{display:inline-flex;align-items:center;gap:8px;padding:5px 12px;border-radius:999px;font-size:13px;color:#fff;background:var(--primary)}
+  .pill.muted{background:#95a5a6}
+  .pill.ok{background:var(--ok)}
+  .card{background:var(--card);border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,.08);padding:18px}
+  .row{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
+  .col-12{grid-column:span 12}
+  .col-6{grid-column:span 6}
+  .col-4{grid-column:span 4}
+  .col-3{grid-column:span 3}
+  .header{border-bottom:2px solid #eaeaea;padding-bottom:16px;margin-bottom:16px}
+  .buttons{display:flex;gap:8px;flex-wrap:wrap}
+  button.btn{padding:8px 14px;border:2px solid var(--primary);background:#fff;color:var(--primary);border-radius:8px;cursor:pointer;font-weight:700}
+  button.btn.active{background:var(--primary);color:#fff}
+  .metric{display:flex;flex-direction:column;gap:6px}
+  .metric .title{font-size:13px;color:var(--muted);font-weight:700}
+  .metric .value{font-size:32px;font-weight:800}
+  .metric .delta{display:inline-block;font-weight:700;padding:4px 10px;border-radius:999px}
+  .delta.up{color:var(--ok);background:rgba(39,174,96,.12)}
+  .delta.down{color:var(--primary);background:rgba(231,76,60,.12)}
+  .label{color:var(--muted);font-size:13px}
+  .grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  .muted{color:var(--muted)}
+  .small{font-size:12px}
+  input[type="date"]{padding:8px 10px;border:2px solid var(--primary);border-radius:8px;font-weight:700}
+  a.link{color:#3498db;text-decoration:none}
+  a.link:hover{text-decoration:underline}
+  .loading{display:none;align-items:center;gap:8px}
+  .loading.show{display:inline-flex}
+  .spinner{width:12px;height:12px;border:2px solid #fff;border-top:2px solid transparent;border-radius:50%;display:inline-block;animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media(max-width:900px){.col-6{grid-column:span 12}.col-4{grid-column:span 12}.grid2{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
-  <div class="dashboard">
+  <div class="wrap">
     <div class="header">
       <h1>🚢 ✈️ MJL 아시아발 글로벌 물류 운임 대시보드</h1>
       <div class="subtitle">MJ LOGISTICS GLOBAL FREIGHT RATE DASHBOARD</div>
-      <div class="update-info">
-        <span class="update-time" id="updateTime">마지막 업데이트: -</span>
-        <span class="data-status">아시아(중국/베트남) → 북미/유럽/인도</span>
-        <span class="sync-status syncing" id="syncStatus"><span class="spinner"></span> <span id="syncText">연결 중...</span></span>
+      <div class="bar">
+        <span id="lastUpdate" class="pill muted">마지막 업데이트: -</span>
+        <span class="pill">아시아(중국/베트남) → 북미/유럽/인도</span>
+        <span id="syncPill" class="pill ok">연결 중…</span>
+        <span id="debugPill" class="pill muted small">디버그: 대기</span>
       </div>
     </div>
 
-    <div class="control-panel">
-      <div class="time-range-buttons">
-        <button class="time-btn" data-range="2W">2주</button>
-        <button class="time-btn" data-range="1M">1개월</button>
-        <button class="time-btn" data-range="3M">3개월</button>
-        <button class="time-btn" data-range="6M">6개월</button>
-        <button class="time-btn active" data-range="1Y">1년</button>
-        <button class="time-btn" data-range="2Y">2년</button>
-        <button class="time-btn" data-range="Max">전체</button>
-      </div>
-      <div class="filters">
-        <label>운임 현황 기준일: </label>
-        <select id="dateSelect"></select>
-        <small style="color:#7f8c8d">가장 가까운 주간 데이터로 반영됩니다.</small>
+    <!-- 데이터 안내 -->
+    <div class="card col-12" style="margin-bottom:16px">
+      <div class="label">📊 실시간 데이터 연동</div>
+      <div class="small muted" style="margin-top:4px">
+        Google Sheets(Apps Script JSONP)로 자동 업데이트 됩니다. 시트 수정은
+        <a id="sheetLink" class="link" target="_blank" rel="noopener">스프레드시트 열기</a>
       </div>
     </div>
 
-    <div class="metrics-grid">
-      <div class="metric-card">
-        <div class="metric-title">발틱운임지수 (BDI)</div>
-        <div class="metric-value" id="bdiValue">-</div>
-        <span class="metric-change" id="bdiChange">-</span>
-      </div>
-      <div class="metric-card">
-        <div class="metric-title">상해컨테이너운임지수 (SCFI)</div>
-        <div class="metric-value" id="scfiValue">-</div>
-        <span class="metric-change" id="scfiChange">-</span>
-      </div>
-      <div class="metric-card">
-        <div class="metric-title">중국컨테이너운임지수 (CCFI)</div>
-        <div class="metric-value" id="ccfiValue">-</div>
-        <span class="metric-change" id="ccfiChange">-</span>
-      </div>
-      <div class="metric-card">
-        <div class="metric-title">HRCI 지수</div>
-        <div class="metric-value" id="hrciValue">-</div>
-        <span class="metric-change" id="hrciChange">-</span>
-      </div>
-    </div>
-
-    <div class="freight-table">
-      <h3 class="chart-title">📊 운임 현황 <span id="asOfLabel" style="color:#e74c3c;font-size:.9em;"></span></h3>
-      <table>
-        <thead>
-          <tr>
-            <th rowspan="3" class="origin-header">출발지</th>
-            <th colspan="2">북미서부</th>
-            <th colspan="1">유럽</th>
-            <th colspan="3">인도</th>
-          </tr>
-          <tr class="destination-header">
-            <th>LA</th><th>롱비치</th><th>로테르담</th><th>Kandla</th><th>Paradip</th><th>JNPT</th>
-          </tr>
-          <tr class="destination-header">
-            <th colspan="6" style="background:#7f8c8d;">단위: USD/TEU</th>
-          </tr>
-        </thead>
-        <tbody id="seaTableBody"></tbody>
-      </table>
-
-      <div style="height:10px"></div>
-
-      <table>
-        <thead>
-          <tr>
-            <th rowspan="3" class="origin-header">출발지</th>
-            <th colspan="2">북미</th>
-            <th colspan="1">유럽</th>
-            <th colspan="3">인도</th>
-          </tr>
-          <tr class="destination-header">
-            <th>LAX</th><th>JFK</th><th>VIE</th><th>DEL</th><th>BOM</th><th>BLR</th>
-          </tr>
-          <tr class="destination-header">
-            <th colspan="6" style="background:#7f8c8d;">단위: USD/kg</th>
-          </tr>
-        </thead>
-        <tbody id="airTableBody"></tbody>
-      </table>
-    </div>
-
-    <div class="charts-grid">
-      <div class="chart-container">
-        <h3 class="chart-title">📈 해운 지수 추이</h3>
-        <canvas id="indexChart" height="400"></canvas>
-      </div>
-      <div class="chart-container">
-        <h3 class="chart-title">🚢 북미 해상 운임 비교 (→ LA)</h3>
-        <canvas id="usSeaChart" height="400"></canvas>
+    <!-- 컨트롤 -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="row">
+        <div class="col-6">
+          <div class="buttons" id="rangeBtns">
+            <button class="btn" data-range="2W">2주</button>
+            <button class="btn" data-range="1M">1개월</button>
+            <button class="btn" data-range="3M">3개월</button>
+            <button class="btn" data-range="6M">6개월</button>
+            <button class="btn active" data-range="1Y">1년</button>
+            <button class="btn" data-range="2Y">2년</button>
+            <button class="btn" data-range="MAX">전체</button>
+          </div>
+        </div>
+        <div class="col-6" style="display:flex;justify-content:flex-end;gap:10px;align-items:center">
+          <span class="label">운임 현황 기준일:</span>
+          <input id="datePicker" type="date" />
+          <span id="hintNear" class="small muted">가장 가까운 주간 데이터로 반영됩니다.</span>
+        </div>
       </div>
     </div>
 
-    <div class="charts-grid">
-      <div class="chart-container">
-        <h3 class="chart-title">🚢 유럽 해상 운임 비교 (→ 로테르담)</h3>
-        <canvas id="euSeaChart" height="400"></canvas>
+    <!-- 4 지표 -->
+    <div class="row" id="kpiRow" style="margin-bottom:16px">
+      <div class="col-4">
+        <div class="card metric">
+          <div class="title">발틱운임지수 (BDI)</div>
+          <div id="bdiVal" class="value">-</div>
+          <div id="bdiDelta" class="delta">-</div>
+        </div>
       </div>
-      <div class="chart-container">
-        <h3 class="chart-title">✈️ 항공 운임 비교 (→ LAX)</h3>
-        <canvas id="airChart" height="400"></canvas>
+      <div class="col-4">
+        <div class="card metric">
+          <div class="title">상해컨테이너운임지수 (SCFI)</div>
+          <div id="scfiVal" class="value">-</div>
+          <div id="scfiDelta" class="delta">-</div>
+        </div>
+      </div>
+      <div class="col-4">
+        <div class="card metric">
+          <div class="title">중국컨테이너운임지수 (CCFI)</div>
+          <div id="ccfiVal" class="value">-</div>
+          <div id="ccfiDelta" class="delta">-</div>
+        </div>
+      </div>
+      <div class="col-4">
+        <div class="card metric">
+          <div class="title">HRCI 지수</div>
+          <div id="hrciVal" class="value">-</div>
+          <div id="hrciDelta" class="delta">-</div>
+        </div>
       </div>
     </div>
+
+    <!-- 테이블(해상/항공) : 컬럼이 충분치 않으면 자동으로 숨김 -->
+    <div class="row">
+      <div class="col-6">
+        <div class="card">
+          <div class="label" style="margin-bottom:8px">🚢 최신 해상 운임 (USD/TEU)</div>
+          <div id="seaTableWrap" class="small muted">시트에 해상 목적지 열이 준비되면 자동 표시됩니다.</div>
+        </div>
+      </div>
+      <div class="col-6">
+        <div class="card">
+          <div class="label" style="margin-bottom:8px">✈️ 최신 항공 운임 (USD/kg)</div>
+          <div id="airTableWrap" class="small muted">시트에 항공 목적지 열이 준비되면 자동 표시됩니다.</div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
-  <script>
-    /* ========== 설정 ========== */
-    const DEBUG = false;
-    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzMb5jrh7SpUdTaaKAMxw_ds22V9f5vdGWkunsmtOxeoKdrSqzTElqGsZ1v8EgPWMo/exec';
-    const AUTO_REFRESH_MS = 5 * 60 * 1000; // 5분
+<script>
+/* ===================== 설정 ===================== */
+/** 1) 여기에 "현재" Apps Script 웹앱 URL(…/exec)을 붙여 넣으세요. */
+const WEB_APP_URL = 'PASTE_YOUR_EXEC_URL_HERE'; // ← ← ← 여기 바꾸기!
 
-    /* ========== 전역 상태 ========== */
-    let charts = {};
-    let refreshTimer = null;
-    let currentTimeRange = '1Y';
-    let viewIdx = null; // 운임 현황에서 선택된 기준일 index
+/** 2) 시트 보기 링크(선택). */
+const SHEET_URL   = 'https://docs.google.com/spreadsheets/d/1FST2PUn1-2cxLiv6igJ_ssCKAC9gaqvVv22j83UApts/edit';
 
-    const ORIGIN_KR_TO_KEY = { '상해':'shanghai','홍콩':'hongkong','심천':'shenzhen','하노이':'hanoi','호치민':'hochiminh' };
-    const SEA_DEST = { 'LA':'la','롱비치':'longbeach','로테르담':'rotterdam','KANDLA':'kandla','PARADIP':'paradip','JNPT':'jnpt' };
-    const AIR_DEST = { 'LAX':'lax','JFK':'jfk','VIE':'vie','DEL':'del','BOM':'bom','BLR':'blr' };
-    const ORIGIN_ORDER = ['shanghai','hongkong','shenzhen','hanoi','hochiminh'];
-    const ORIGIN_NAME = { shanghai:'🇨🇳 상해', hongkong:'🇭🇰 홍콩', shenzhen:'🇨🇳 심천', hanoi:'🇻🇳 하노이', hochiminh:'🇻🇳 호치민' };
+/** 3) 새로고침 주기(분). */
+const REFRESH_INTERVAL_MIN = 5;
 
-    let dataStore = emptyData();
+/* =============== 내부 상태 =============== */
+let rawRows = [];          // [ [헤더…], [데이터…], … ]
+let header  = [];          // 헤더 1행
+let dateCol = 0;           // 날짜 열 인덱스
+let idxMap  = {};          // { BDI:1, SCFI:2, … }  (존재할 때만)
+let lastDateIdx = -1;
+let currentRange = '1Y';
 
-    function emptyData(){
-      const initFreight = ()=>({
-        sea:{ la:[],longbeach:[],rotterdam:[],kandla:[],paradip:[],jnpt:[] },
-        air:{ lax:[],jfk:[],vie:[],del:[],bom:[],blr:[] }
-      });
-      const freight = {};
-      ORIGIN_ORDER.forEach(k=>freight[k]=initFreight());
-      return {
-        dates: [], datesStr: [],
-        indices: { BDI:[], SCFI:[], CCFI:[], HRCI:[] },
-        freight
-      };
+/* =============== 유틸 =============== */
+const $ = sel => document.querySelector(sel);
+const el = id => document.getElementById(id);
+function fmt(n, d=2){ return (isFinite(n)? Number(n).toFixed(d): '-'); }
+function pct(a,b){
+  if(!isFinite(a)||!isFinite(b)||b===0) return null;
+  return ((a-b)/b*100);
+}
+function nearestIndexByDate(isoDate){
+  if(!rawRows.length) return -1;
+  const target = new Date(isoDate).getTime();
+  let best = -1, bestDiff = 1e18;
+  for(let i=1;i<rawRows.length;i++){
+    const t = new Date(rawRows[i][dateCol]).getTime();
+    const diff = Math.abs(t-target);
+    if(diff < bestDiff){ bestDiff = diff; best = i; }
+  }
+  return best;
+}
+function monthsBackIndex(months){
+  if(lastDateIdx<0) return 1;
+  // 데이터가 주간 기준이므로 대략 4주 = 1달 가정
+  const back = Math.round(months*4);
+  return Math.max(1, lastDateIdx - back);
+}
+
+/* =============== UI =============== */
+function setSync(text, ok=true){
+  const pill = el('syncPill');
+  pill.textContent = text;
+  pill.className = 'pill ' + (ok ? 'ok' : 'muted');
+}
+function setDebug(text){ el('debugPill').textContent = '디버그: ' + text; }
+
+function buildMiniTable(wrapperId, colsWanted){
+  const wrap = el(wrapperId);
+  // 준비된 목적지 열만 추출
+  const exists = colsWanted.filter(c => header.includes(c));
+  if(exists.length === 0){
+    wrap.innerHTML = '<div class="small muted">관련 열이 아직 없습니다.</div>';
+    return;
+  }
+  const idxs = exists.map(n => header.indexOf(n));
+  const i = lastDateIdx;
+  const rows = exists.map((name, k) => {
+    const v = parseFloat(rawRows[i][idxs[k]])||0;
+    return `<div class="row" style="align-items:center;margin-bottom:6px">
+              <div class="col-6 small">${name.replaceAll('_',' ')}</div>
+              <div class="col-6" style="text-align:right;font-weight:800">$${fmt(v, name.includes('kg')?2:0)}</div>
+            </div>`;
+  }).join('');
+  wrap.innerHTML = rows;
+}
+
+/* 4 KPI 업데이트 (있을 때만) */
+function updateKPIs(){
+  if(lastDateIdx<1) return;
+  const startIdx =
+    currentRange==='2W'? Math.max(1,lastDateIdx-2):
+    currentRange==='1M'? Math.max(1,lastDateIdx-4):
+    currentRange==='3M'? Math.max(1,lastDateIdx-13):
+    currentRange==='6M'? Math.max(1,lastDateIdx-26):
+    currentRange==='1Y'? Math.max(1,lastDateIdx-52):
+    currentRange==='2Y'? Math.max(1,lastDateIdx-104): 1;
+
+  const sets = [
+    {k:'BDI',  val:'bdiVal',  d:'bdiDelta',  digits:0},
+    {k:'SCFI', val:'scfiVal', d:'scfiDelta', digits:2},
+    {k:'CCFI', val:'ccfiVal', d:'ccfiDelta', digits:2},
+    {k:'HRCI', val:'hrciVal', d:'hrciDelta', digits:1},
+  ];
+  sets.forEach(s=>{
+    const cIdx = idxMap[s.k];
+    const vEl  = el(s.val), dEl = el(s.d);
+    if(cIdx==null){ vEl.textContent='-'; dEl.textContent='-'; dEl.className='delta'; return; }
+    const curr = parseFloat(rawRows[lastDateIdx][cIdx])||0;
+    const prev = parseFloat(rawRows[startIdx][cIdx])||0;
+    vEl.textContent = isFinite(curr)? fmt(curr, s.digits): '-';
+    const p = pct(curr,prev);
+    if(p==null){ dEl.textContent='-'; dEl.className='delta'; }
+    else{
+      const up = p>=0;
+      dEl.textContent = (up?'▲ ':'▼ ') + Math.abs(p).toFixed(1)+'%';
+      dEl.className = 'delta ' + (up?'up':'down');
     }
+  });
 
-    function log(){ if(DEBUG) console.log.apply(console, arguments); }
+  // 기준일
+  const d = new Date(rawRows[lastDateIdx][dateCol]);
+  el('lastUpdate').textContent = `마지막 업데이트: ${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
 
-    /* ========== 유틸 ========== */
-    const norm = s => String(s ?? '').replace(/\s+/g,'').toUpperCase();
-    function toNum(v){
-      if(typeof v === 'number') return isFinite(v)?v:0;
-      if(typeof v === 'string'){
-        const t = v.trim();
-        if(!t || t === '-') return 0;
-        const n = Number(t.replace(/,/g,''));
-        return isNaN(n)?0:n;
+/* =============== 데이터 파싱 =============== */
+function parseData(arr){
+  rawRows = Array.isArray(arr)? arr.slice(): [];
+  if(rawRows.length<2){ throw new Error('데이터 부족'); }
+  header = rawRows[0];
+
+  // 날짜 열 탐지: '날짜' 혹은 Date로 파싱 가능한 첫 열
+  dateCol = 0;
+  const dateIdxByName = header.findIndex(h => (h+'').includes('날짜'));
+  if(dateIdxByName>=0) dateCol = dateIdxByName;
+
+  // 지표 인덱스(있을 때만 등록)
+  idxMap = {};
+  ['BDI','SCFI','CCFI','HRCI'].forEach(name=>{
+    const i = header.findIndex(h => (h+'').trim().toUpperCase().includes(name));
+    if(i>=0) idxMap[name]=i;
+  });
+
+  // 마지막 행(최신일)
+  lastDateIdx = rawRows.length-1;
+
+  // datePicker: min/max 지정
+  const minD = new Date(rawRows[1][dateCol]);
+  const maxD = new Date(rawRows[lastDateIdx][dateCol]);
+  const dp = el('datePicker');
+  dp.min = minD.toISOString().slice(0,10);
+  dp.max = maxD.toISOString().slice(0,10);
+  dp.value = maxD.toISOString().slice(0,10);
+}
+
+/* =============== 렌더링 =============== */
+function renderAll(){
+  updateKPIs();
+
+  // 해상/항공 미니 테이블(열이 있을 때만)
+  buildMiniTable('seaTableWrap', [
+    // 시트 헤더 명을 그대로 사용 (예: 상해_해상_LA, 상해_해상_로테르담 …)
+    '상해_해상_LA', '상해_해상_롱비치', '상해_해상_로테르담',
+    '홍콩_해상_LA',  '홍콩_해상_롱비치',  '홍콩_해상_로테르담',
+    '심천_해상_LA',  '심천_해상_롱비치',  '심천_해상_로테르담',
+  ]);
+  buildMiniTable('airTableWrap', [
+    // 예시(필요 시 시트 헤더명에 맞춰 추가/수정)
+    '상해_항공_LAX', '상해_항공_JFK', '상해_항공_VIE',
+    '홍콩_항공_LAX', '홍콩_항공_JFK', '홍콩_항공_VIE',
+  ]);
+}
+
+/* =============== JSONP 로드 =============== */
+function loadFromAppsScript(){
+  setSync('연결 중…', true); setDebug('요청 준비');
+  // 이전 스크립트 제거
+  const old = document.getElementById('jsonp-script');
+  if(old) old.remove();
+
+  // JSONP 콜백
+  window.handleGoogleSheetsData = function(resp){
+    try{
+      if(!resp || resp.status!=='success' || !Array.isArray(resp.data)){
+        throw new Error('응답 형식 오류');
       }
-      return 0;
+      setDebug('응답 수신');
+      parseData(resp.data);
+      renderAll();
+      setSync('동기화 완료', true);
+    }catch(e){
+      console.error(e);
+      setSync('데이터 오류', false);
+      setDebug('파싱 실패');
     }
-    function parseDateCell(v){
-      if(v instanceof Date && !isNaN(v)) return v;
-      if(typeof v === 'string'){
-        const s = v.trim().replace(/[./]/g,'-');
-        const d = new Date(s);
-        if(!isNaN(d)) return d;
-      }
-      const d = new Date(v);
-      return isNaN(d) ? null : d;
-    }
-    const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  };
 
-    function setSync(status, text){
-      const el = document.getElementById('syncStatus');
-      const tx = document.getElementById('syncText');
-      el.className = 'sync-status';
-      if(status==='syncing') el.classList.add('syncing');
-      if(status==='error') el.classList.add('error');
-      tx.textContent = text;
-    }
+  // JSONP 스크립트 삽입
+  const s = document.createElement('script');
+  s.id = 'jsonp-script';
+  s.src = WEB_APP_URL + '?callback=handleGoogleSheetsData&_=' + Date.now();
+  s.onerror = function(){
+    setSync('연결 실패', false);
+    setDebug('JSONP 로드 실패');
+  };
+  document.body.appendChild(s);
+}
 
-    /* ========== JSONP 콜백을 먼저 등록 ========== */
-    window.handleGoogleSheetsData = function(payload){
-      try{
-        log('[JSONP] 콜백 수신', payload?.status, payload?.rowCount, payload?.colCount, payload?.sheet);
-        if(payload && payload.status === 'success' && Array.isArray(payload.data)){
-          parseSheetData(payload.data);
-          afterDataReady();
-          setSync('success','동기화 완료');
-          document.getElementById('updateTime').textContent =
-            '마지막 업데이트: ' + new Date().toLocaleString('ko-KR');
-        }else{
-          console.warn('데이터 오류:', payload);
-          setSync('error','데이터 오류');
-          loadSampleData(true);
-        }
-      }catch(err){
-        console.error('콜백 처리 실패:', err);
-        setSync('error','데이터 오류');
-        loadSampleData(true);
-      }
-    };
+/* =============== 이벤트 =============== */
+function onRangeClick(e){
+  const btn = e.target.closest('button');
+  if(!btn) return;
+  document.querySelectorAll('#rangeBtns .btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  currentRange = btn.dataset.range;
+  renderAll();
+}
+function onDatePicked(e){
+  const v = e.target.value;
+  const i = nearestIndexByDate(v);
+  if(i>0){ lastDateIdx = i; renderAll(); }
+}
 
-    /* ========== JSONP 스크립트 삽입 ========== */
-    function loadFromAppsScript(){
-      setSync('syncing','데이터 동기화 중...');
-      const old = document.getElementById('sheets-data-script');
-      if(old) old.remove();
-      const s = document.createElement('script');
-      s.id  = 'sheets-data-script';
-      s.src = WEB_APP_URL + '?callback=handleGoogleSheetsData&_=' + Date.now(); // 캐시 회피
-      s.onerror = ()=>{ console.error('JSONP 로드 실패'); setSync('error','연결 실패'); loadSampleData(true); };
-      document.body.appendChild(s);
-    }
+/* =============== 시작 =============== */
+document.addEventListener('DOMContentLoaded', ()=>{
+  // 링크/컨트롤
+  el('sheetLink').href = SHEET_URL;
+  $('#rangeBtns').addEventListener('click', onRangeClick);
+  el('datePicker').addEventListener('change', onDatePicked);
 
-    /* ========== 시트 파싱(헤더 자동 매핑) ========== */
-    function parseSheetData(rows){
-      if(!Array.isArray(rows) || rows.length < 2) throw new Error('sheet rows 부족');
-
-      dataStore = emptyData();
-
-      const header = rows[0].map(h => (h ?? '').toString());
-      const HN = header.map(h=>norm(h));
-
-      // 헤더 컬럼 인덱스 탐색
-      let colDate = HN.findIndex(h=> h.includes('날짜') || h.includes('DATE'));
-      if(colDate < 0) colDate = 0; // 첫 열이 날짜일 가능성
-
-      const colBDI  = HN.findIndex(h=> h.includes('BDI'));
-      const colSCFI = HN.findIndex(h=> h.includes('SCFI'));
-      const colCCFI = HN.findIndex(h=> h.includes('CCFI'));
-      const colHRCI = HN.findIndex(h=> h.includes('HRCI'));
-
-      // 목적지 매핑용 함수
-      const findOriginKey = (h) => {
-        for(const [kr,key] of Object.entries(ORIGIN_KR_TO_KEY)){
-          if(h.includes(kr)) return key;
-        }
-        return null;
-      };
-      const findSeaDest = (h) => {
-        for(const [label, key] of Object.entries(SEA_DEST)){
-          if(h.includes(label)) return key;
-        }
-        // 'LA'는 LAX와 겹칠 수 있으므로 해상에서만 처리
-        if(h.includes('LA')) return 'la';
-        return null;
-      };
-      const findAirDest = (h) => {
-        for(const [label, key] of Object.entries(AIR_DEST)){
-          if(h.includes(label)) return key;
-        }
-        return null;
-      };
-
-      // 각 운임 컬럼의 {type, origin, dest, col} 매핑표를 구성
-      const colMap = [];
-      header.forEach((h, idx)=>{
-        if(idx === colDate || idx===colBDI || idx===colSCFI || idx===colCCFI || idx===colHRCI) return;
-        const u = HN[idx];
-        const isSea = u.includes('해상');
-        const isAir = u.includes('항공');
-
-        if(!isSea && !isAir) return;
-
-        const origin = findOriginKey(h);
-        if(!origin) return;
-
-        let dest = isSea ? findSeaDest(h) : findAirDest(h);
-        if(!dest) return;
-
-        colMap.push({ type: isSea?'sea':'air', origin, dest, col: idx });
-      });
-
-      // 데이터 채우기
-      for(let r=1; r<rows.length; r++){
-        const row = rows[r];
-
-        const d = parseDateCell(row[colDate]);
-        if(!d) continue;
-
-        dataStore.dates.push(d);
-        dataStore.datesStr.push(ymd(d));
-
-        if(colBDI  >=0) dataStore.indices.BDI .push(toNum(row[colBDI ]));
-        if(colSCFI >=0) dataStore.indices.SCFI.push(toNum(row[colSCFI]));
-        if(colCCFI >=0) dataStore.indices.CCFI.push(toNum(row[colCCFI]));
-        if(colHRCI >=0) dataStore.indices.HRCI.push(toNum(row[colHRCI]));
-
-        // 운임들
-        colMap.forEach(m=>{
-          const v = toNum(row[m.col]);
-          if(m.type==='sea') dataStore.freight[m.origin].sea[m.dest].push(v);
-          else               dataStore.freight[m.origin].air[m.dest].push(v);
-        });
-      }
-
-      log('[parse] dates=', dataStore.dates.length, 'cols map=', colMap.length);
-    }
-
-    /* ========== 샘플 데이터 (실패 시 안전장치) ========== */
-    function loadSampleData(reset){
-      if(reset) dataStore = emptyData();
-      const weeks = 52; const end = new Date();
-      for(let i=0;i<weeks;i++){
-        const d = new Date(end); d.setDate(d.getDate() - (weeks-i)*7);
-        dataStore.dates.push(d); dataStore.datesStr.push(ymd(d));
-        dataStore.indices.BDI .push(1100+Math.random()*200);
-        dataStore.indices.SCFI.push( 900+Math.random()*200);
-        dataStore.indices.CCFI.push( 950+Math.random()*100);
-        dataStore.indices.HRCI.push( 600+Math.random()*100);
-        ORIGIN_ORDER.forEach(o=>{
-          dataStore.freight[o].sea.la        .push(1500+Math.random()*300);
-          dataStore.freight[o].sea.longbeach .push(1550+Math.random()*300);
-          dataStore.freight[o].sea.rotterdam .push(3400+Math.random()*400);
-          dataStore.freight[o].sea.kandla    .push( 800+Math.random()*200);
-          dataStore.freight[o].sea.paradip   .push( 850+Math.random()*200);
-          dataStore.freight[o].sea.jnpt      .push( 900+Math.random()*200);
-
-          dataStore.freight[o].air.lax.push(4.5+Math.random());
-          dataStore.freight[o].air.jfk.push(5.0+Math.random());
-          dataStore.freight[o].air.vie.push(3.8+Math.random());
-          dataStore.freight[o].air.del.push(2.5+Math.random());
-          dataStore.freight[o].air.bom.push(2.7+Math.random());
-          dataStore.freight[o].air.blr.push(2.8+Math.random());
-        });
-      }
-      afterDataReady();
-      setSync('error','샘플 데이터(연결 실패)');
-    }
-
-    /* ========== UI 갱신 엔진 ========== */
-    function afterDataReady(){
-      // 날짜 선택 셀렉트 채우기
-      const sel = document.getElementById('dateSelect');
-      sel.innerHTML = '';
-      dataStore.datesStr.forEach((ds, i)=>{
-        const opt = document.createElement('option');
-        opt.value = ds; opt.textContent = ds;
-        sel.appendChild(opt);
-      });
-      // 기본: 최신일자
-      viewIdx = dataStore.dates.length - 1;
-      sel.value = dataStore.datesStr[viewIdx];
-      sel.onchange = ()=>{
-        const i = dataStore.datesStr.indexOf(sel.value);
-        viewIdx = (i>=0)? i : dataStore.datesStr.length-1;
-        updateMetrics(); updateTables(); // 차트는 기간 필터로 전체 추이 그리니까 그대로
-      };
-
-      updateMetrics();
-      updateTables();
-      updateCharts();
-    }
-
-    function startIndexByRange(){
-      const end = dataStore.dates.length - 1;
-      if(end < 0) return 0;
-      switch(currentTimeRange){
-        case '2W': return Math.max(0, end-2);
-        case '1M': return Math.max(0, end-4);
-        case '3M': return Math.max(0, end-13);
-        case '6M': return Math.max(0, end-26);
-        case '1Y': return Math.max(0, end-52);
-        case '2Y': return Math.max(0, end-104);
-        default: return 0;
-      }
-    }
-
-    function updateMetrics(){
-      if(dataStore.dates.length===0) return;
-      const start = startIndexByRange();
-      const last  = viewIdx ?? (dataStore.dates.length-1);
-
-      function setMetric(key, valueId, changeId, digits){
-        const curr = dataStore.indices[key][last] ?? 0;
-        const base = dataStore.indices[key][start] ?? curr;
-        const pct  = (base===0)? null : ((curr-base)/base*100);
-        document.getElementById(valueId).textContent = (isFinite(curr)?curr.toFixed(digits):'-');
-        const el = document.getElementById(changeId);
-        if(pct==null){ el.textContent='-'; el.className='metric-change'; }
-        else{
-          el.textContent = `${pct>=0?'▲':'▼'} ${Math.abs(pct).toFixed(1)}%`;
-          el.className   = `metric-change ${pct>=0?'positive':'negative'}`;
-        }
-      }
-
-      setMetric('BDI','bdiValue','bdiChange',0);
-      setMetric('SCFI','scfiValue','scfiChange',2);
-      setMetric('CCFI','ccfiValue','ccfiChange',2);
-      setMetric('HRCI','hrciValue','hrciChange',1);
-
-      const d = dataStore.dates[last];
-      document.getElementById('asOfLabel').textContent =
-        `(${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 기준)`;
-    }
-
-    function updateTables(){
-      if(dataStore.dates.length===0) return;
-      const i = viewIdx ?? (dataStore.dates.length-1);
-
-      // 해상
-      const seaBody = document.getElementById('seaTableBody');
-      seaBody.innerHTML = '';
-      ORIGIN_ORDER.forEach(o=>{
-        const s = dataStore.freight[o].sea;
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td style="font-weight:bold">${ORIGIN_NAME[o]}</td>
-          <td>${val(s.la[i])}</td>
-          <td>${val(s.longbeach[i])}</td>
-          <td>${val(s.rotterdam[i])}</td>
-          <td>${val(s.kandla[i])}</td>
-          <td>${val(s.paradip[i])}</td>
-          <td>${val(s.jnpt[i])}</td>`;
-        seaBody.appendChild(tr);
-      });
-
-      // 항공
-      const airBody = document.getElementById('airTableBody');
-      airBody.innerHTML = '';
-      ORIGIN_ORDER.forEach(o=>{
-        const a = dataStore.freight[o].air;
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td style="font-weight:bold">${ORIGIN_NAME[o]}</td>
-          <td>${val(a.lax[i],2)}</td>
-          <td>${val(a.jfk[i],2)}</td>
-          <td>${val(a.vie[i],2)}</td>
-          <td>${val(a.del[i],2)}</td>
-          <td>${val(a.bom[i],2)}</td>
-          <td>${val(a.blr[i],2)}</td>`;
-        airBody.appendChild(tr);
-      });
-
-      function val(x, d=0){ return (isFinite(x)? (d? x.toFixed(d): Math.round(x)) : '-'); }
-    }
-
-    function destroyChart(key){ if(charts[key]){ charts[key].destroy(); charts[key]=null; } }
-
-    function updateCharts(){
-      if(dataStore.dates.length===0) return;
-      const start = startIndexByRange();
-      const labels = dataStore.dates.slice(start).map(d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
-
-      // 해운 지수
-      destroyChart('index');
-      charts.index = new Chart(document.getElementById('indexChart').getContext('2d'),{
-        type:'line',
-        data:{
-          labels,
-          datasets:[
-            {label:'BDI',  data:dataStore.indices.BDI.slice(start),  borderColor:'#3498db',tension:.35},
-            {label:'SCFI', data:dataStore.indices.SCFI.slice(start), borderColor:'#e74c3c',tension:.35},
-            {label:'CCFI', data:dataStore.indices.CCFI.slice(start), borderColor:'#f39c12',tension:.35},
-            {label:'HRCI', data:dataStore.indices.HRCI.slice(start), borderColor:'#2ecc71',tension:.35, yAxisID:'y1'}
-          ]
-        },
-        options:{
-          responsive:true, maintainAspectRatio:false,
-          scales:{ y:{position:'left'}, y1:{position:'right', grid:{drawOnChartArea:false}} }
-        }
-      });
-
-      // 북미 해상(→ LA)
-      destroyChart('usSea');
-      charts.usSea = new Chart(document.getElementById('usSeaChart').getContext('2d'),{
-        type:'line',
-        data:{
-          labels,
-          datasets: ORIGIN_ORDER.map((o,idx)=>({
-            label:`${ORIGIN_NAME[o]} → LA`,
-            data:dataStore.freight[o].sea.la.slice(start),
-            borderColor:['#3498db','#e74c3c','#9b59b6','#f39c12','#2ecc71'][idx],
-            tension:.35
-          }))
-        },
-        options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{title:{display:true,text:'USD/TEU'}} } }
-      });
-
-      // 유럽 해상(→ 로테르담)
-      destroyChart('euSea');
-      charts.euSea = new Chart(document.getElementById('euSeaChart').getContext('2d'),{
-        type:'line',
-        data:{
-          labels,
-          datasets: ORIGIN_ORDER.map((o,idx)=>({
-            label:`${ORIGIN_NAME[o]} → 로테르담`,
-            data:dataStore.freight[o].sea.rotterdam.slice(start),
-            borderColor:['#3498db','#e74c3c','#9b59b6','#f39c12','#2ecc71'][idx],
-            tension:.35
-          }))
-        },
-        options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{title:{display:true,text:'USD/TEU'}} } }
-      });
-
-      // 항공(→ LAX)
-      destroyChart('air');
-      charts.air = new Chart(document.getElementById('airChart').getContext('2d'),{
-        type:'line',
-        data:{
-          labels,
-          datasets: ORIGIN_ORDER.map((o,idx)=>({
-            label:`${ORIGIN_NAME[o]} → LAX`,
-            data:dataStore.freight[o].air.lax.slice(start),
-            borderColor:['#3498db','#e74c3c','#9b59b6','#f39c12','#2ecc71'][idx],
-            tension:.35
-          }))
-        },
-        options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{title:{display:true,text:'USD/kg'}} } }
-      });
-    }
-
-    /* ========== 이벤트 바인딩 & 부팅 ========== */
-    document.addEventListener('DOMContentLoaded', ()=>{
-      // 기간 버튼
-      document.querySelectorAll('.time-btn').forEach(btn=>{
-        btn.addEventListener('click', ()=>{
-          document.querySelectorAll('.time-btn').forEach(b=>b.classList.remove('active'));
-          btn.classList.add('active');
-          currentTimeRange = btn.getAttribute('data-range');
-          updateMetrics(); updateCharts();
-        });
-      });
-
-      loadFromAppsScript(); // 최초 로드
-      refreshTimer = setInterval(loadFromAppsScript, AUTO_REFRESH_MS);
-    });
-
-    window.addEventListener('beforeunload', ()=>{ if(refreshTimer) clearInterval(refreshTimer); });
-  </script>
+  // 첫 로드 & 주기적 새로고침
+  loadFromAppsScript();
+  setInterval(loadFromAppsScript, REFRESH_INTERVAL_MIN*60*1000);
+});
+</script>
 </body>
 </html>
