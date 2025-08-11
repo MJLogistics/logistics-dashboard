@@ -242,7 +242,6 @@
             background: rgba(231, 76, 60, 0.1);
         }
         
-        /* 분석 및 평가 섹션 */
         .analysis-section {
             background: white;
             border-radius: 15px;
@@ -554,15 +553,17 @@
                 <span class="update-time" id="updateTime">마지막 업데이트: -</span>
                 <span class="data-status">아시아(중국/베트남) → 북미/유럽/인도</span>
                 <span class="sync-status" id="syncStatus">
-                    <span id="syncText">초기화 중...</span>
+                    <span id="syncText">샘플 데이터 로드됨</span>
                 </span>
             </div>
         </div>
 
         <div class="data-source-info">
             📊 <strong>데이터 연동 상태</strong><br>
-            Google Apps Script와 실시간 연동을 시도합니다. 연결 실패 시 샘플 데이터가 표시됩니다.<br>
-            <button onclick="loadDataFromGoogleSheets()" style="background: #3498db; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; margin-top: 5px;">데이터 새로고침</button>
+            현재 샘플 데이터가 표시되고 있습니다. 실제 데이터 연동을 위해서는:<br>
+            1. Google Apps Script를 배포하여 웹앱 URL을 획득<br>
+            2. 아래 코드에서 WEB_APP_URL 변수를 실제 URL로 변경<br>
+            <button onclick="loadDataFromGoogleSheets()" style="background: #3498db; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; margin-top: 5px;">실제 데이터 연동 시도</button>
         </div>
 
         <div class="control-panel">
@@ -609,7 +610,6 @@
             </div>
         </div>
 
-        <!-- 분석 및 평가 섹션 -->
         <div class="analysis-section">
             <h3 class="chart-title">📊 지수 변동 수치 분석</h3>
             <div class="analysis-grid" id="analysisGrid">
@@ -795,8 +795,8 @@
 
     <script>
         // ==================== 설정 ====================
-        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzUBdFZB3HXbdWAR-pV96DCHPvhWoDTt0-2L4qCMx6EwPlgvz_50tO-XxgRugg2Il-k/exec';
-        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1FST2PUn1-2cxLiv6igJ_ssCKAC9gaqvVv22j83UApts/edit';
+        // 실제 Google Apps Script 웹 앱 URL로 변경하세요
+        const WEB_APP_URL = 'YOUR_ACTUAL_WEB_APP_URL_HERE';
         
         // 자동 새로고침 간격 (5분)
         const REFRESH_INTERVAL = 5 * 60 * 1000;
@@ -843,8 +843,6 @@
         // ==================== 데이터 로드 함수 ====================
         window.handleGoogleSheetsData = function(result) {
             try {
-                console.log('Google Sheets 응답:', result);
-                
                 if (result && result.status === 'success' && result.data) {
                     parseSheetData(result.data);
                     updateAllUI();
@@ -853,16 +851,12 @@
                     const now = new Date();
                     document.getElementById('updateTime').textContent = 
                         `마지막 업데이트: ${now.toLocaleString('ko-KR')}`;
-                        
-                    console.log('실제 데이터 로드 성공');
                 } else {
-                    throw new Error(result?.message || '데이터 로드 실패');
+                    throw new Error('데이터 로드 실패: ' + (result?.message || '알 수 없는 오류'));
                 }
             } catch (error) {
                 console.error('데이터 처리 오류:', error);
-                updateSyncStatus('error', '데이터 연동 실패 - 샘플 데이터 사용');
-                
-                // 첫 로드인 경우에만 샘플 데이터 로드
+                updateSyncStatus('error', '데이터 파싱 오류');
                 if (currentData.dates.length === 0) {
                     loadSampleData();
                 }
@@ -872,9 +866,14 @@
         };
 
         function loadDataFromGoogleSheets() {
-            console.log('Google Sheets 데이터 로드 시작...');
+            if (WEB_APP_URL === 'YOUR_ACTUAL_WEB_APP_URL_HERE') {
+                updateSyncStatus('error', '웹앱 URL이 설정되지 않음');
+                alert('실제 Google Apps Script 웹앱 URL을 설정해주세요.\n\n설정 방법:\n1. Google Apps Script에서 제공된 코드를 배포\n2. 생성된 웹앱 URL을 WEB_APP_URL 변수에 입력');
+                return;
+            }
+            
             showLoading(true);
-            updateSyncStatus('syncing', '실제 데이터 연동 중...');
+            updateSyncStatus('syncing', '실제 데이터 연동 시도 중...');
             
             try {
                 // 기존 JSONP 스크립트 제거
@@ -890,38 +889,25 @@
                 
                 script.onerror = function() {
                     console.error('스크립트 로드 실패');
-                    updateSyncStatus('error', '연결 실패 - 샘플 데이터 사용');
+                    updateSyncStatus('error', '연결 실패 - URL 또는 권한 확인');
                     showLoading(false);
-                    
-                    if (currentData.dates.length === 0) {
-                        loadSampleData();
-                    }
                 };
                 
-                // 타임아웃 설정 (15초)
+                // 타임아웃 설정 (10초)
                 setTimeout(() => {
-                    const scriptEl = document.getElementById('sheets-data-script');
-                    if (scriptEl) {
+                    if (document.getElementById('sheets-data-script')) {
                         console.warn('데이터 로드 타임아웃');
                         updateSyncStatus('error', '연결 타임아웃 - 샘플 데이터 사용');
                         showLoading(false);
-                        
-                        if (currentData.dates.length === 0) {
-                            loadSampleData();
-                        }
                     }
-                }, 15000);
+                }, 10000);
                 
                 document.body.appendChild(script);
                 
             } catch (error) {
                 console.error('데이터 로드 오류:', error);
-                updateSyncStatus('error', '연결 오류 - 샘플 데이터 사용');
+                updateSyncStatus('error', '연결 오류');
                 showLoading(false);
-                
-                if (currentData.dates.length === 0) {
-                    loadSampleData();
-                }
             }
         }
         
@@ -930,8 +916,6 @@
             if (!data || !Array.isArray(data) || data.length < 2) {
                 throw new Error('올바르지 않은 데이터 형식');
             }
-            
-            console.log(`스프레드시트 데이터: ${data.length}행 x ${data[0]?.length || 0}열`);
             
             const rows = data.slice(1);
             
@@ -948,31 +932,20 @@
             });
             
             // 데이터 파싱
-            rows.forEach((row, index) => {
-                if (!row || row.length < 5) {
-                    console.warn(`행 ${index + 2}: 데이터 불충분 (${row?.length || 0}열)`);
-                    return;
-                }
+            rows.forEach(row => {
+                if (!row || row.length < 5) return;
                 
                 const dateValue = row[0];
                 let date;
-                
                 if (dateValue instanceof Date) {
                     date = dateValue;
                 } else if (typeof dateValue === 'string') {
                     date = new Date(dateValue);
-                } else if (typeof dateValue === 'number') {
-                    // Excel 날짜 형식 처리
-                    date = new Date((dateValue - 25569) * 86400 * 1000);
                 } else {
-                    console.warn(`행 ${index + 2}: 잘못된 날짜 형식`, dateValue);
                     return;
                 }
                 
-                if (isNaN(date.getTime())) {
-                    console.warn(`행 ${index + 2}: 유효하지 않은 날짜`, dateValue);
-                    return;
-                }
+                if (isNaN(date.getTime())) return;
                 
                 currentData.dates.push(date);
                 currentData.indices.BDI.push(parseFloat(row[1]) || 0);
@@ -1003,7 +976,7 @@
                         currentData.freight[origin].air.blr.push(parseFloat(row[colIdx++]) || 0);
                     });
                 } else {
-                    // 기본값으로 채움 (지수 데이터만 있는 경우)
+                    // 기본값으로 채움
                     origins.forEach(origin => {
                         ['la', 'longbeach', 'rotterdam', 'kandla', 'paradip', 'jnpt'].forEach(dest => {
                             currentData.freight[origin].sea[dest].push(0);
@@ -1023,7 +996,7 @@
         function loadSampleData() {
             console.log('샘플 데이터 생성 중...');
             
-            const sampleWeeks = 104;
+            const sampleWeeks = 104; // 2년치 데이터
             const endDate = new Date();
             
             // 데이터 초기화
@@ -1043,10 +1016,10 @@
                 date.setDate(date.getDate() - (sampleWeeks - i) * 7);
                 currentData.dates.push(date);
                 
-                // 시간에 따른 변동 패턴
-                const trend = i * 2;
-                const seasonal = Math.sin(i / 13) * 100;
-                const random = (Math.random() - 0.5) * 150;
+                // 시간에 따른 변동 패턴 (트렌드 + 주기성 + 랜덤)
+                const trend = i * 2; // 장기 트렌드
+                const seasonal = Math.sin(i / 13) * 100; // 계절적 변동
+                const random = (Math.random() - 0.5) * 150; // 랜덤 변동
                 
                 currentData.indices.BDI.push(Math.max(500, 1100 + trend + seasonal + random));
                 currentData.indices.SCFI.push(Math.max(400, 900 + trend * 0.8 + seasonal * 0.8 + random * 0.8));
@@ -1055,7 +1028,7 @@
                 
                 // 운임 데이터
                 origins.forEach((origin, originIdx) => {
-                    const baseMultiplier = 1 + (originIdx * 0.1);
+                    const baseMultiplier = 1 + (originIdx * 0.1); // 지역별 차이
                     const marketVariation = Math.random() * 300;
                     
                     // 해상 운임
@@ -1088,6 +1061,7 @@
             if (currentData.dates.length === 0) return;
             
             const latestDate = currentData.dates[currentData.dates.length - 1];
+            const earliestDate = currentData.dates[0];
             
             // 운임 테이블용 날짜 선택기
             document.getElementById('selectedDate').value = latestDate.toISOString().split('T')[0];
@@ -1266,7 +1240,7 @@
             const strongestCorr = correlations.reduce((max, curr) => curr.value > max.value ? curr : max);
             document.getElementById('strongestCorr').textContent = strongestCorr.name;
             
-            // 독립적 지수
+            // 독립적 지수 (HRCI는 y1축에 별도 표시되므로 독립성이 높음)
             document.getElementById('independentIndex').textContent = 'HRCI (별도 스케일)';
             
             // 통계 요약
@@ -1286,4 +1260,536 @@
             document.getElementById('risingIndices').textContent = risingIndices.length > 0 ? risingIndices.join(', ') : '없음';
             document.getElementById('fallingIndices').textContent = fallingIndices.length > 0 ? fallingIndices.join(', ') : '없음';
             document.getElementById('maxIncrease').textContent = `${maxIncrease.name} (+${maxIncrease.change.toFixed(1)}%)`;
-            document.
+            document.getElementById('maxDecrease').textContent = `${maxDecrease.name} (${maxDecrease.change.toFixed(1)}%)`;
+            document.getElementById('avgChange').textContent = `${avgChange > 0 ? '+' : ''}${avgChange}%`;
+        }
+        
+        // ==================== 통계 계산 함수들 ====================
+        function calculateStandardDeviation(data) {
+            const mean = data.reduce((sum, value) => sum + value, 0) / data.length;
+            const variance = data.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) / data.length;
+            return Math.sqrt(variance);
+        }
+        
+        function calculateCorrelation(x, y) {
+            const n = Math.min(x.length, y.length);
+            const meanX = x.slice(0, n).reduce((sum, val) => sum + val, 0) / n;
+            const meanY = y.slice(0, n).reduce((sum, val) => sum + val, 0) / n;
+            
+            let numerator = 0;
+            let denomX = 0;
+            let denomY = 0;
+            
+            for (let i = 0; i < n; i++) {
+                const dx = x[i] - meanX;
+                const dy = y[i] - meanY;
+                numerator += dx * dy;
+                denomX += dx * dx;
+                denomY += dy * dy;
+            }
+            
+            const denominator = Math.sqrt(denomX * denomY);
+            return denominator === 0 ? 0 : numerator / denominator;
+        }
+        
+        function getDataRange() {
+            if (customDateRange) {
+                // 사용자 정의 범위에서 가장 가까운 인덱스 찾기
+                let startIdx = 0;
+                let endIdx = currentData.dates.length - 1;
+                
+                for (let i = 0; i < currentData.dates.length; i++) {
+                    if (currentData.dates[i] >= customDateRange.start) {
+                        startIdx = i;
+                        break;
+                    }
+                }
+                
+                for (let i = currentData.dates.length - 1; i >= 0; i--) {
+                    if (currentData.dates[i] <= customDateRange.end) {
+                        endIdx = i;
+                        break;
+                    }
+                }
+                
+                return { start: startIdx, end: endIdx };
+            } else {
+                const endIdx = currentData.dates.length - 1;
+                let startIdx = 0;
+                
+                switch(currentTimeRange) {
+                    case '2W': startIdx = Math.max(0, endIdx - 2); break;
+                    case '1M': startIdx = Math.max(0, endIdx - 4); break;
+                    case '3M': startIdx = Math.max(0, endIdx - 13); break;
+                    case '6M': startIdx = Math.max(0, endIdx - 26); break;
+                    case '1Y': startIdx = Math.max(0, endIdx - 52); break;
+                    case '2Y': startIdx = Math.max(0, endIdx - 104); break;
+                    case 'Max': startIdx = 0; break;
+                }
+                
+                return { start: startIdx, end: endIdx };
+            }
+        }
+        
+        function updateFreightTables() {
+            if (currentData.dates.length === 0) return;
+            
+            const dataIdx = selectedDateIndex >= 0 ? selectedDateIndex : currentData.dates.length - 1;
+            const prevIdx = Math.max(0, dataIdx - 1);
+            
+            const origins = ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'];
+            const originNames = ['🇨🇳 상해', '🇭🇰 홍콩', '🇨🇳 심천', '🇻🇳 하노이', '🇻🇳 호치민'];
+            
+            // 해상 운임 테이블
+            const seaTableBody = document.getElementById('seaTableBody');
+            seaTableBody.innerHTML = '';
+            
+            origins.forEach((origin, i) => {
+                const row = document.createElement('tr');
+                
+                const seaDestinations = ['la', 'longbeach', 'rotterdam', 'kandla', 'paradip', 'jnpt'];
+                let rowHtml = `<td style="font-weight: bold;">${originNames[i]}</td>`;
+                
+                seaDestinations.forEach(dest => {
+                    const currentRate = currentData.freight[origin].sea[dest][dataIdx];
+                    const prevRate = currentData.freight[origin].sea[dest][prevIdx];
+                    const change = currentRate - prevRate;
+                    const changeClass = change > 0 ? 'rate-up' : change < 0 ? 'rate-down' : 'rate-stable';
+                    const changeSymbol = change > 0 ? '↑' : change < 0 ? '↓' : '→';
+                    
+                    rowHtml += `<td>${currentRate.toFixed(0)}<span class="rate-change ${changeClass}">${changeSymbol}</span></td>`;
+                });
+                
+                row.innerHTML = rowHtml;
+                seaTableBody.appendChild(row);
+            });
+            
+            // 항공 운임 테이블
+            const airTableBody = document.getElementById('airTableBody');
+            airTableBody.innerHTML = '';
+            
+            origins.forEach((origin, i) => {
+                const row = document.createElement('tr');
+                
+                const airDestinations = ['lax', 'jfk', 'vie', 'del', 'bom', 'blr'];
+                let rowHtml = `<td style="font-weight: bold;">${originNames[i]}</td>`;
+                
+                airDestinations.forEach(dest => {
+                    const currentRate = currentData.freight[origin].air[dest][dataIdx];
+                    const prevRate = currentData.freight[origin].air[dest][prevIdx];
+                    const change = currentRate - prevRate;
+                    const changeClass = change > 0 ? 'rate-up' : change < 0 ? 'rate-down' : 'rate-stable';
+                    const changeSymbol = change > 0 ? '↑' : change < 0 ? '↓' : '→';
+                    
+                    rowHtml += `<td>${currentRate.toFixed(2)}<span class="rate-change ${changeClass}">${changeSymbol}</span></td>`;
+                });
+                
+                row.innerHTML = rowHtml;
+                airTableBody.appendChild(row);
+            });
+        }
+        
+        // ==================== 날짜 선택 기능 ====================
+        function updateTableByDate() {
+            const selectedDate = new Date(document.getElementById('selectedDate').value);
+            if (isNaN(selectedDate.getTime())) {
+                alert('올바른 날짜를 선택해주세요.');
+                return;
+            }
+            
+            // 가장 가까운 날짜 찾기
+            let closestIndex = 0;
+            let minDiff = Math.abs(currentData.dates[0] - selectedDate);
+            
+            for (let i = 1; i < currentData.dates.length; i++) {
+                const diff = Math.abs(currentData.dates[i] - selectedDate);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closestIndex = i;
+                }
+            }
+            
+            selectedDateIndex = closestIndex;
+            updateFreightTables();
+        }
+        
+        function goToLatestDate() {
+            if (currentData.dates.length === 0) return;
+            
+            selectedDateIndex = -1;
+            const latestDate = currentData.dates[currentData.dates.length - 1];
+            document.getElementById('selectedDate').value = latestDate.toISOString().split('T')[0];
+            updateFreightTables();
+        }
+        
+        // ==================== 차트 업데이트 ====================
+        function updateCharts() {
+            updateIndexChart();
+            updateUSSeaChart();
+            updateEUSeaChart();
+            updateAirChart();
+        }
+        
+        function updateIndexChart() {
+            const ctx = document.getElementById('indexChart').getContext('2d');
+            
+            if (charts.index) charts.index.destroy();
+            
+            const dataRange = getDataRange();
+            const startIdx = dataRange.start;
+            const endIdx = dataRange.end;
+            
+            const labels = currentData.dates.slice(startIdx, endIdx + 1).map(d => 
+                `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+            );
+            
+            charts.index = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'BDI',
+                            data: currentData.indices.BDI.slice(startIdx, endIdx + 1),
+                            borderColor: '#3498db',
+                            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                            tension: 0.4,
+                            fill: false
+                        },
+                        {
+                            label: 'SCFI',
+                            data: currentData.indices.SCFI.slice(startIdx, endIdx + 1),
+                            borderColor: '#e74c3c',
+                            backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                            tension: 0.4,
+                            fill: false
+                        },
+                        {
+                            label: 'CCFI',
+                            data: currentData.indices.CCFI.slice(startIdx, endIdx + 1),
+                            borderColor: '#f39c12',
+                            backgroundColor: 'rgba(243, 156, 18, 0.1)',
+                            tension: 0.4,
+                            fill: false
+                        },
+                        {
+                            label: 'HRCI',
+                            data: currentData.indices.HRCI.slice(startIdx, endIdx + 1),
+                            borderColor: '#2ecc71',
+                            backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                            tension: 0.4,
+                            fill: false,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: { display: true, text: '날짜' }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: { display: true, text: 'BDI, SCFI, CCFI' }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: { display: true, text: 'HRCI' },
+                            grid: { drawOnChartArea: false }
+                        }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    }
+                }
+            });
+        }
+        
+        function updateUSSeaChart() {
+            const ctx = document.getElementById('usSeaChart').getContext('2d');
+            const selectedOrigin = document.getElementById('usSeaOriginSelect').value;
+            
+            if (charts.usSea) charts.usSea.destroy();
+            
+            const dataRange = getDataRange();
+            const startIdx = dataRange.start;
+            const endIdx = dataRange.end;
+            
+            const labels = currentData.dates.slice(startIdx, endIdx + 1).map(d => 
+                `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+            );
+            
+            const datasets = [];
+            const origins = selectedOrigin === 'all' ? 
+                ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'] : [selectedOrigin];
+            const colors = {
+                shanghai: '#3498db',
+                hongkong: '#e74c3c',
+                shenzhen: '#9b59b6',
+                hanoi: '#f39c12',
+                hochiminh: '#2ecc71'
+            };
+            const names = {
+                shanghai: '상해',
+                hongkong: '홍콩',
+                shenzhen: '심천',
+                hanoi: '하노이',
+                hochiminh: '호치민'
+            };
+            
+            origins.forEach(origin => {
+                datasets.push({
+                    label: `${names[origin]} → LA`,
+                    data: currentData.freight[origin].sea.la.slice(startIdx, endIdx + 1),
+                    borderColor: colors[origin],
+                    backgroundColor: colors[origin] + '20',
+                    tension: 0.4,
+                    fill: false
+                });
+            });
+            
+            charts.usSea = new Chart(ctx, {
+                type: 'line',
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { position: 'top' },
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    scales: { 
+                        y: { title: { display: true, text: 'USD/TEU' } },
+                        x: { title: { display: true, text: '날짜' } }
+                    }
+                }
+            });
+        }
+        
+        function updateEUSeaChart() {
+            const ctx = document.getElementById('euSeaChart').getContext('2d');
+            const selectedOrigin = document.getElementById('euSeaOriginSelect').value;
+            
+            if (charts.euSea) charts.euSea.destroy();
+            
+            const dataRange = getDataRange();
+            const startIdx = dataRange.start;
+            const endIdx = dataRange.end;
+            
+            const labels = currentData.dates.slice(startIdx, endIdx + 1).map(d => 
+                `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+            );
+            
+            const datasets = [];
+            const origins = selectedOrigin === 'all' ? 
+                ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'] : [selectedOrigin];
+            const colors = {
+                shanghai: '#3498db',
+                hongkong: '#e74c3c',
+                shenzhen: '#9b59b6',
+                hanoi: '#f39c12',
+                hochiminh: '#2ecc71'
+            };
+            const names = {
+                shanghai: '상해',
+                hongkong: '홍콩',
+                shenzhen: '심천',
+                hanoi: '하노이',
+                hochiminh: '호치민'
+            };
+            
+            origins.forEach(origin => {
+                datasets.push({
+                    label: `${names[origin]} → 로테르담`,
+                    data: currentData.freight[origin].sea.rotterdam.slice(startIdx, endIdx + 1),
+                    borderColor: colors[origin],
+                    backgroundColor: colors[origin] + '20',
+                    tension: 0.4,
+                    fill: false
+                });
+            });
+            
+            charts.euSea = new Chart(ctx, {
+                type: 'line',
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { position: 'top' },
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    scales: { 
+                        y: { title: { display: true, text: 'USD/TEU' } },
+                        x: { title: { display: true, text: '날짜' } }
+                    }
+                }
+            });
+        }
+        
+        function updateAirChart() {
+            const ctx = document.getElementById('airChart').getContext('2d');
+            const selectedOrigin = document.getElementById('airOriginSelect').value;
+            
+            if (charts.air) charts.air.destroy();
+            
+            const dataRange = getDataRange();
+            const startIdx = dataRange.start;
+            const endIdx = dataRange.end;
+            
+            const labels = currentData.dates.slice(startIdx, endIdx + 1).map(d => 
+                `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+            );
+            
+            const datasets = [];
+            const origins = selectedOrigin === 'all' ? 
+                ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'] : [selectedOrigin];
+            const colors = {
+                shanghai: '#3498db',
+                hongkong: '#e74c3c',
+                shenzhen: '#9b59b6',
+                hanoi: '#f39c12',
+                hochiminh: '#2ecc71'
+            };
+            const names = {
+                shanghai: '상해',
+                hongkong: '홍콩',
+                shenzhen: '심천',
+                hanoi: '하노이',
+                hochiminh: '호치민'
+            };
+            
+            origins.forEach(origin => {
+                datasets.push({
+                    label: `${names[origin]} → LAX`,
+                    data: currentData.freight[origin].air.lax.slice(startIdx, endIdx + 1),
+                    borderColor: colors[origin],
+                    backgroundColor: colors[origin] + '20',
+                    tension: 0.4,
+                    fill: false
+                });
+            });
+            
+            charts.air = new Chart(ctx, {
+                type: 'line',
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { position: 'top' },
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    scales: { 
+                        y: { title: { display: true, text: 'USD/kg' } },
+                        x: { title: { display: true, text: '날짜' } }
+                    }
+                }
+            });
+        }
+        
+        // ==================== 유틸리티 함수 ====================
+        function switchTab(tabName) {
+            const tabs = document.querySelectorAll('.tab');
+            const contents = document.querySelectorAll('.tab-content');
+            
+            tabs.forEach(tab => tab.classList.remove('active'));
+            contents.forEach(content => content.classList.remove('active'));
+            
+            if (tabName === 'sea') {
+                tabs[0].classList.add('active');
+                document.getElementById('seaTab').classList.add('active');
+            } else {
+                tabs[1].classList.add('active');
+                document.getElementById('airTab').classList.add('active');
+            }
+        }
+        
+        function showLoading(show) {
+            const overlay = document.getElementById('loadingOverlay');
+            if (show) {
+                overlay.classList.add('active');
+            } else {
+                overlay.classList.remove('active');
+            }
+        }
+        
+        function updateSyncStatus(status, text) {
+            const syncStatus = document.getElementById('syncStatus');
+            
+            syncStatus.className = 'sync-status';
+            
+            if (status === 'syncing') {
+                syncStatus.classList.add('syncing');
+                syncStatus.innerHTML = '<span class="spinner"></span><span id="syncText">' + text + '</span>';
+            } else if (status === 'error') {
+                syncStatus.classList.add('error');
+                syncStatus.innerHTML = '<span id="syncText">' + text + '</span>';
+            } else {
+                syncStatus.innerHTML = '<span id="syncText">' + text + '</span>';
+            }
+        }
+        
+        // ==================== 이벤트 리스너 ====================
+        document.addEventListener('DOMContentLoaded', function() {
+            // 시간 범위 버튼
+            document.querySelectorAll('.time-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentTimeRange = this.getAttribute('data-range');
+                    customDateRange = null; // 사용자 정의 범위 초기화
+                    updateMetrics();
+                    updateAnalysis();
+                    updateCharts();
+                });
+            });
+            
+            // 차트 필터 선택
+            document.getElementById('usSeaOriginSelect').addEventListener('change', updateUSSeaChart);
+            document.getElementById('euSeaOriginSelect').addEventListener('change', updateEUSeaChart);
+            document.getElementById('airOriginSelect').addEventListener('change', updateAirChart);
+            
+            // 초기 샘플 데이터 로드
+            loadSampleData();
+            
+            // 5초 후 실제 데이터 연동 시도 (백그라운드)
+            setTimeout(() => {
+                if (WEB_APP_URL !== 'YOUR_ACTUAL_WEB_APP_URL_HERE') {
+                    loadDataFromGoogleSheets();
+                }
+            }, 5000);
+            
+            // 자동 새로고침 설정 (실제 URL이 설정된 경우에만)
+            if (WEB_APP_URL !== 'YOUR_ACTUAL_WEB_APP_URL_HERE') {
+                refreshTimer = setInterval(() => {
+                    loadDataFromGoogleSheets();
+                }, REFRESH_INTERVAL);
+            }
+        });
+        
+        // 페이지 언로드 시 타이머 정리
+        window.addEventListener('beforeunload', function() {
+            if (refreshTimer) {
+                clearInterval(refreshTimer);
+            }
+        });
+    </script>
+</body>
+</html>
