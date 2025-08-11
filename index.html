@@ -889,7 +889,7 @@
                 // JSONP 방식으로 데이터 로드
                 const script = document.createElement('script');
                 script.id = 'sheets-data-script';
-                script.src = WEB_APP_URL + '?callback=handleGoogleSheetsData&type=dashboard&t=' + Date.now();
+                script.src = https://script.google.com/macros/s/AKfycbzUBdFZB3HXbdWAR-pV96DCHPvhWoDTt0-2L4qCMx6EwPlgvz_50tO-XxgRugg2Il-k/exec'?callback=handleGoogleSheetsData&type=dashboard&t=' + Date.now();
                 
                 script.onerror = function() {
                     console.error('스크립트 로드 실패');
