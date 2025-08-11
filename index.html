@@ -250,12 +250,11 @@
   </div>
 
   <script>
-    /* ===== 설정(Apps Script만 사용) ===== */
-    const USE_CSV = false; // CSV 비활성
-    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzMb5jrh7SpUdTaaKAMxw_ds22V9f5vdGWkunsmtOxeoKdrSqzTElqGsZ1v8EgPWMo/exec';
+    // ===== 설정(Apps Script) =====
+    const WEB_APP_URL = 'PASTE_YOUR_EXEC_URL_HERE'; // ← 여기에 /exec 주소 붙여넣기
     const REFRESH_INTERVAL = 5 * 60 * 1000;
 
-    /* ===== 상태 ===== */
+    // ===== 상태 =====
     let currentData = initData();
     let charts = {};
     let currentTimeRange = '1Y';
@@ -270,13 +269,12 @@
           acc[o]={ 
             sea:{ la:[], longbeach:[], rotterdam:[], kandla:[], paradip:[], jnpt:[] },
             air:{ lax:[], jfk:[],        vie:[],      del:[],    bom:[],   blr:[] }
-          };
-          return acc;
+          }; return acc;
         },{})
       };
     }
 
-    /* ===== JSONP 콜백 ===== */
+    // ===== JSONP 콜백 =====
     window.handleGoogleSheetsData = function(result){
       try{
         if(result && result.status === 'success' && Array.isArray(result.data)){
@@ -292,7 +290,7 @@
       }
     };
 
-    /* ===== Apps Script 로드(JSONP) ===== */
+    // ===== Apps Script 로드(JSONP) =====
     async function loadDataFromGoogleSheets(){
       showLoading(true);
       updateSyncStatus('syncing','데이터 동기화 중...');
@@ -315,7 +313,7 @@
       }
     }
 
-    /* ===== 공통: rows → 상태 반영 & 렌더 ===== */
+    // ===== rows → 상태 반영 & 렌더 =====
     function handleRowsAndRender(rows, lastUpdateStr){
       parseSheetData(rows);
       if(currentData.dates.length){
@@ -332,14 +330,13 @@
       showLoading(false);
     }
 
-    /* ===== 데이터 파싱 ===== */
+    // ===== 데이터 파싱 =====
     function parseSheetData(data){
       const rows = data.slice(1); // 헤더 제거
       currentData = initData();
       const origins = ['shanghai','hongkong','shenzhen','hanoi','hochiminh'];
-      let skipped = 0;
       rows.forEach(row=>{
-        if(!row || row.length < 65){ skipped++; return; }
+        if(!row || row.length < 65) return; // 열 수 부족 스킵(필요 시 완화)
         currentData.dates.push(new Date(row[0]));
         currentData.indices.BDI.push(parseFloat(row[1])||0);
         currentData.indices.SCFI.push(parseFloat(row[2])||0);
@@ -363,10 +360,9 @@
           currentData.freight[o].air.blr.push(parseFloat(row[col++])||0);
         });
       });
-      if(skipped>0) console.warn(`[대시보드] 열 수 부족으로 스킵한 행: ${skipped}건`);
     }
 
-    /* ===== UI 업데이트 ===== */
+    // ===== UI =====
     function updateAllUI(){ updateMetrics(); updateFreightTables(); updateCharts(); }
     function safePctChange(curr, start){ if(!isFinite(curr)||!isFinite(start)||start===0) return null; return ((curr-start)/start*100); }
 
@@ -399,10 +395,12 @@
       const last = (selectedDateIndex==null) ? currentData.dates.length-1 : selectedDateIndex;
       const origins=['shanghai','hongkong','shenzhen','hanoi','hochiminh'];
       const names=['🇨🇳 상해','🇭🇰 홍콩','🇨🇳 심천','🇻🇳 하노이','🇻🇳 호치민'];
+      // SEA
       const seaBody=document.getElementById('seaTableBody'); seaBody.innerHTML='';
       origins.forEach((o,i)=>{
-        const row=document.createElement('tr'); const s=currentData.freight[o].sea;
-        row.innerHTML=`
+        const s=currentData.freight[o].sea;
+        const tr=document.createElement('tr');
+        tr.innerHTML=`
           <td style="font-weight:bold;">${names[i]}</td>
           <td>$${(s.la[last]||0).toFixed(0)}</td>
           <td>$${(s.longbeach[last]||0).toFixed(0)}</td>
@@ -410,12 +408,14 @@
           <td>$${(s.kandla[last]||0).toFixed(0)}</td>
           <td>$${(s.paradip[last]||0).toFixed(0)}</td>
           <td>$${(s.jnpt[last]||0).toFixed(0)}</td>`;
-        seaBody.appendChild(row);
+        seaBody.appendChild(tr);
       });
+      // AIR
       const airBody=document.getElementById('airTableBody'); airBody.innerHTML='';
       origins.forEach((o,i)=>{
-        const a=currentData.freight[o].air; const row=document.createElement('tr');
-        row.innerHTML=`
+        const a=currentData.freight[o].air;
+        const tr=document.createElement('tr');
+        tr.innerHTML=`
           <td style="font-weight:bold;">${names[i]}</td>
           <td>$${(a.lax[last]||0).toFixed(2)}</td>
           <td>$${(a.jfk[last]||0).toFixed(2)}</td>
@@ -423,11 +423,11 @@
           <td>$${(a.del[last]||0).toFixed(2)}</td>
           <td>$${(a.bom[last]||0).toFixed(2)}</td>
           <td>$${(a.blr[last]||0).toFixed(2)}</td>`;
-        airBody.appendChild(row);
+        airBody.appendChild(tr);
       });
     }
 
-    /* ===== 차트 ===== */
+    // ===== 차트 =====
     function updateCharts(){ updateIndexChart(); updateUSSeaChart(); updateEUSeaChart(); updateAirChart(); }
     function monthLabels(fromIdx){ return currentData.dates.slice(fromIdx).map(d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`); }
     function destroyIfExists(key){ if(charts[key]){ charts[key].destroy(); charts[key]=null; } }
@@ -470,7 +470,7 @@
     function updateEUSeaChart(){ buildLineChart('euSeaChart','euSea','euSeaOriginSelect','USD/TEU'); }
     function updateAirChart(){   buildLineChart('airChart','air','airOriginSelect','USD/kg'); }
 
-    /* ===== 기타 ===== */
+    // ===== 유틸 & 이벤트 =====
     function getStartIndex(range){
       const end=currentData.dates.length-1; if(end<0) return 0;
       switch(range){
@@ -497,7 +497,7 @@
       el.innerHTML=(status==='syncing')?`<span class="spinner"></span><span id="syncText">${text}</span>`:`<span id="syncText">${text}</span>`;
     }
 
-    /* ===== 날짜 컨트롤 ===== */
+    // 날짜 컨트롤
     function applySelectedDateFromInput(){
       const inputVal=document.getElementById('rateDateInput').value;
       if(!inputVal){ selectedDateIndex=null; updateFreightTables(); updateMetrics(); return; }
@@ -527,7 +527,7 @@
       updateFreightTables(); updateMetrics();
     }
 
-    /* ===== 부팅 ===== */
+    // 부팅
     document.addEventListener('DOMContentLoaded', ()=>{
       document.querySelectorAll('.time-btn').forEach(btn=>{
         btn.addEventListener('click', function(){
@@ -536,11 +536,11 @@
           updateMetrics(); updateCharts();
         });
       });
-
-      document.getElementById('usSeaOriginSelect').addEventListener('change', updateUSSeaChart);
-      document.getElementById('euSeaOriginSelect').addEventListener('change', updateEUSeaChart);
-      document.getElementById('airOriginSelect').addEventListener('change', updateAirChart);
-
+      ['usSeaOriginSelect','euSeaOriginSelect','airOriginSelect'].forEach(id=>{
+        document.getElementById(id).addEventListener('change', ()=>({
+          usSeaOriginSelect:updateUSSeaChart, euSeaOriginSelect:updateEUSeaChart, airOriginSelect:updateAirChart
+        }[id]()) );
+      });
       document.getElementById('dateApplyBtn').addEventListener('click', applySelectedDateFromInput);
       document.getElementById('datePrevBtn').addEventListener('click', ()=>stepSelectedDate(-1));
       document.getElementById('dateNextBtn').addEventListener('click', ()=>stepSelectedDate(1));
@@ -548,7 +548,6 @@
       loadDataFromGoogleSheets();
       refreshTimer = setInterval(loadDataFromGoogleSheets, REFRESH_INTERVAL);
     });
-
     document.addEventListener('visibilitychange', ()=>{
       if(refreshTimer && document.hidden){ clearInterval(refreshTimer); refreshTimer=null; }
       else if(!document.hidden){
@@ -556,7 +555,6 @@
         refreshTimer = setInterval(loadDataFromGoogleSheets, REFRESH_INTERVAL);
       }
     });
-
     window.addEventListener('beforeunload', ()=>{ if(refreshTimer) clearInterval(refreshTimer); });
   </script>
 </body>
