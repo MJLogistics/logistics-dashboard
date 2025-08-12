@@ -508,6 +508,66 @@
             text-decoration: underline;
         }
         
+        .debug-info {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-family: monospace;
+            font-size: 0.8em;
+            color: #495057;
+        }
+        
+        .control-button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 5px;
+            margin-right: 5px;
+            font-size: 0.9em;
+            transition: background 0.3s;
+        }
+        
+        .control-button:hover {
+            background: #2980b9;
+        }
+        
+        .control-button.success {
+            background: #27ae60;
+        }
+        
+        .control-button.success:hover {
+            background: #229954;
+        }
+        
+        .control-button.danger {
+            background: #e74c3c;
+        }
+        
+        .control-button.danger:hover {
+            background: #c0392b;
+        }
+        
+        .control-button.warning {
+            background: #f39c12;
+        }
+        
+        .control-button.warning:hover {
+            background: #d68910;
+        }
+        
+        .control-button.diagnosis {
+            background: #9b59b6;
+        }
+        
+        .control-button.diagnosis:hover {
+            background: #8e44ad;
+        }
+        
         @media (max-width: 768px) {
             .charts-grid {
                 grid-template-columns: 1fr;
@@ -553,17 +613,24 @@
                 <span class="update-time" id="updateTime">마지막 업데이트: -</span>
                 <span class="data-status">아시아(중국/베트남) → 북미/유럽/인도</span>
                 <span class="sync-status" id="syncStatus">
-                    <span id="syncText">샘플 데이터 로드됨</span>
+                    <span id="syncText">시스템 초기화 중...</span>
                 </span>
             </div>
         </div>
 
+        <div class="debug-info" id="debugInfo">
+            <strong>🔧 연동 상태:</strong><br>
+            <span id="debugText">시스템 초기화 중...</span>
+        </div>
+
         <div class="data-source-info">
-            📊 <strong>데이터 연동 상태</strong><br>
-            현재 샘플 데이터가 표시되고 있습니다. 실제 데이터 연동을 위해서는:<br>
-            1. Google Apps Script를 배포하여 웹앱 URL을 획득<br>
-            2. 아래 코드에서 WEB_APP_URL 변수를 실제 URL로 변경<br>
-            <button onclick="loadDataFromGoogleSheets()" style="background: #3498db; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; margin-top: 5px;">실제 데이터 연동 시도</button>
+            📊 <strong>데이터 연동 설정</strong><br>
+            실제 Google Sheets 데이터와 연동이 시도됩니다.<br>
+            • Apps Script URL: 설정됨<br>
+            • 스프레드시트 ID: 1FST2PUn1-2cxLiv6igJ_ssCKAC9gaqvVv22j83UApts<br>
+            <button onclick="loadDataFromGoogleSheets()" class="control-button">수동 데이터 연동</button>
+            <button onclick="testConnection()" class="control-button success">연결 테스트</button>
+            <button onclick="runFullDiagnosis()" class="control-button diagnosis">🔍 전체 진단</button>
         </div>
 
         <div class="control-panel">
@@ -795,8 +862,9 @@
 
     <script>
         // ==================== 설정 ====================
-        // 실제 Google Apps Script 웹 앱 URL로 변경하세요
+        // 실제 Google Apps Script 웹 앱 URL
         const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzUBdFZB3HXbdWAR-pV96DCHPvhWoDTt0-2L4qCMx6EwPlgvz_50tO-XxgRugg2Il-k/exec';
+        const SPREADSHEET_ID = '1FST2PUn1-2cxLiv6igJ_ssCKAC9gaqvVv22j83UApts';
         
         // 자동 새로고침 간격 (5분)
         const REFRESH_INTERVAL = 5 * 60 * 1000;
@@ -840,10 +908,55 @@
         let selectedDateIndex = -1;
         let refreshTimer = null;
         
-        // ==================== 데이터 로드 함수 ====================
+        // ==================== 디버그 함수 ====================
+        function updateDebugInfo(message) {
+            document.getElementById('debugText').innerHTML = message;
+            console.log('[DEBUG]', message);
+        }
+        
+        function testConnection() {
+            updateDebugInfo('연결 테스트 시작...');
+            updateSyncStatus('syncing', '연결 테스트 중...');
+            
+            const testUrl = `${WEB_APP_URL}?type=health&callback=handleHealthCheck&t=${Date.now()}`;
+            updateDebugInfo(`테스트 URL: ${testUrl}`);
+            
+            const script = document.createElement('script');
+            script.src = testUrl;
+            script.onerror = function() {
+                updateDebugInfo('❌ 연결 실패: 스크립트 로드 오류');
+                updateSyncStatus('error', '연결 테스트 실패');
+            };
+            
+            document.body.appendChild(script);
+            
+            setTimeout(() => {
+                if (document.getElementById('debugText').innerHTML.includes('테스트 URL:')) {
+                    updateDebugInfo('⏰ 연결 테스트 타임아웃 (10초)');
+                    updateSyncStatus('error', '연결 타임아웃');
+                    script.remove();
+                }
+            }, 10000);
+        }
+        
+        window.handleHealthCheck = function(result) {
+            console.log('Health check result:', result);
+            if (result && result.status === 'success') {
+                updateDebugInfo(`✅ 연결 성공!<br>스프레드시트: ${result.spreadsheet.name}<br>시트 수: ${result.spreadsheet.sheets.length}<br>버전: ${result.version}`);
+                updateSyncStatus('success', '연결 테스트 성공');
+            } else {
+                updateDebugInfo(`❌ 연결 실패: ${result?.message || '알 수 없는 오류'}`);
+                updateSyncStatus('error', '연결 테스트 실패');
+            }
+        };
+        
+        // ==================== 개선된 데이터 로드 함수 ====================
         window.handleGoogleSheetsData = function(result) {
             try {
+                console.log('Apps Script 응답:', result);
+                
                 if (result && result.status === 'success' && result.data) {
+                    updateDebugInfo(`✅ 데이터 로드 성공!<br>행 수: ${result.rowCount}<br>열 수: ${result.columnCount}<br>시트: ${result.sheetName}<br>${result.sheetSource || ''}`);
                     parseSheetData(result.data);
                     updateAllUI();
                     updateSyncStatus('success', '실제 데이터 연동 완료');
@@ -856,7 +969,10 @@
                 }
             } catch (error) {
                 console.error('데이터 처리 오류:', error);
+                updateDebugInfo(`❌ 데이터 파싱 오류: ${error.message}`);
                 updateSyncStatus('error', '데이터 파싱 오류');
+                
+                // 실패 시 샘플 데이터 로드
                 if (currentData.dates.length === 0) {
                     loadSampleData();
                 }
@@ -865,59 +981,103 @@
             }
         };
 
+        // ==================== 개선된 데이터 로드 함수 ====================
         function loadDataFromGoogleSheets() {
-            if (WEB_APP_URL === 'https://script.google.com/macros/s/AKfycbzUBdFZB3HXbdWAR-pV96DCHPvhWoDTt0-2L4qCMx6EwPlgvz_50tO-XxgRugg2Il-k/exec') {
-                updateSyncStatus('error', '웹앱 URL이 설정되지 않음');
-                alert('실제 Google Apps Script 웹앱 URL을 설정해주세요.\n\n설정 방법:\n1. Google Apps Script에서 제공된 코드를 배포\n2. 생성된 웹앱 URL을 WEB_APP_URL 변수에 입력');
-                return;
-            }
-            
             showLoading(true);
             updateSyncStatus('syncing', '실제 데이터 연동 시도 중...');
+            updateDebugInfo('Google Sheets 데이터 요청 시작...');
             
-            try {
-                // 기존 JSONP 스크립트 제거
-                const oldScript = document.getElementById('sheets-data-script');
-                if (oldScript) {
-                    oldScript.remove();
-                }
-                
-                // JSONP 방식으로 데이터 로드
-                const script = document.createElement('script');
-                script.id = 'sheets-data-script';
-                script.src = `${https://script.google.com/macros/s/AKfycbzUBdFZB3HXbdWAR-pV96DCHPvhWoDTt0-2L4qCMx6EwPlgvz_50tO-XxgRugg2Il-k/exec}?callback=handleGoogleSheetsData&type=dashboard&t=${Date.now()}`;
-                
-                script.onerror = function() {
-                    console.error('스크립트 로드 실패');
-                    updateSyncStatus('error', '연결 실패 - URL 또는 권한 확인');
-                    showLoading(false);
-                };
-                
-                // 타임아웃 설정 (10초)
-                setTimeout(() => {
-                    if (document.getElementById('sheets-data-script')) {
-                        console.warn('데이터 로드 타임아웃');
-                        updateSyncStatus('error', '연결 타임아웃 - 샘플 데이터 사용');
-                        showLoading(false);
-                    }
-                }, 10000);
-                
-                document.body.appendChild(script);
-                
-            } catch (error) {
-                console.error('데이터 로드 오류:', error);
-                updateSyncStatus('error', '연결 오류');
-                showLoading(false);
+            // 재시도 로직
+            let retryCount = 0;
+            const maxRetries = 3;
+            
+            function attemptLoad() {
+                return new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.id = 'sheets-data-script';
+                    const requestUrl = `${WEB_APP_URL}?callback=handleGoogleSheetsData&type=dashboard&t=${Date.now()}`;
+                    script.src = requestUrl;
+                    
+                    updateDebugInfo(`요청 시도 ${retryCount + 1}/${maxRetries}: ${requestUrl}`);
+                    
+                    // 전역 콜백 설정
+                    window.handleGoogleSheetsData = function(result) {
+                        script.remove();
+                        delete window.handleGoogleSheetsData;
+                        
+                        try {
+                            if (result && result.status === 'success' && result.data) {
+                                updateDebugInfo(`✅ 데이터 수신 성공!<br>행 수: ${result.rowCount}<br>열 수: ${result.columnCount}<br>시트: ${result.sheetName}<br>${result.sheetSource || ''}`);
+                                
+                                parseSheetData(result.data);
+                                updateAllUI();
+                                updateSyncStatus('success', '실제 데이터 연동 완료');
+                                
+                                const now = new Date();
+                                document.getElementById('updateTime').textContent = 
+                                    `마지막 업데이트: ${now.toLocaleString('ko-KR')}`;
+                                
+                                resolve(result);
+                            } else {
+                                throw new Error('데이터 수신 실패: ' + (result?.message || '알 수 없는 오류'));
+                            }
+                        } catch (error) {
+                            reject(error);
+                        }
+                    };
+                    
+                    script.onerror = function() {
+                        script.remove();
+                        delete window.handleGoogleSheetsData;
+                        reject(new Error('스크립트 로드 실패'));
+                    };
+                    
+                    // 타임아웃 설정
+                    setTimeout(() => {
+                        if (document.body.contains(script)) {
+                            script.remove();
+                            delete window.handleGoogleSheetsData;
+                            reject(new Error('요청 타임아웃'));
+                        }
+                    }, 15000);
+                    
+                    document.body.appendChild(script);
+                });
             }
+            
+            // 재시도 로직 실행
+            function tryLoadWithRetry() {
+                attemptLoad()
+                    .then(() => {
+                        showLoading(false);
+                    })
+                    .catch(error => {
+                        console.error(`시도 ${retryCount + 1} 실패:`, error);
+                        retryCount++;
+                        
+                        if (retryCount < maxRetries) {
+                            updateDebugInfo(`❌ 시도 ${retryCount}/${maxRetries} 실패: ${error.message}<br>2초 후 재시도...`);
+                            setTimeout(tryLoadWithRetry, 2000);
+                        } else {
+                            updateDebugInfo(`❌ 최대 재시도 횟수 초과<br>마지막 오류: ${error.message}<br>샘플 데이터로 전환...`);
+                            updateSyncStatus('error', '연결 실패 - 샘플 데이터 사용');
+                            showLoading(false);
+                            loadSampleData();
+                        }
+                    });
+            }
+            
+            tryLoadWithRetry();
         }
         
-        // ==================== 데이터 파싱 ====================
+        // ==================== 개선된 데이터 파싱 ====================
         function parseSheetData(data) {
             if (!data || !Array.isArray(data) || data.length < 2) {
                 throw new Error('올바르지 않은 데이터 형식');
             }
             
             const rows = data.slice(1);
+            updateDebugInfo(`데이터 파싱 시작: ${rows.length}개 데이터 행`);
             
             // 데이터 초기화
             currentData.dates = [];
@@ -931,70 +1091,280 @@
                 };
             });
             
-            // 데이터 파싱
-            rows.forEach(row => {
-                if (!row || row.length < 5) return;
-                
-                const dateValue = row[0];
-                let date;
-                if (dateValue instanceof Date) {
-                    date = dateValue;
-                } else if (typeof dateValue === 'string') {
-                    date = new Date(dateValue);
-                } else {
-                    return;
-                }
-                
-                if (isNaN(date.getTime())) return;
-                
-                currentData.dates.push(date);
-                currentData.indices.BDI.push(parseFloat(row[1]) || 0);
-                currentData.indices.SCFI.push(parseFloat(row[2]) || 0);
-                currentData.indices.CCFI.push(parseFloat(row[3]) || 0);
-                currentData.indices.HRCI.push(parseFloat(row[4]) || 0);
-                
-                // 운임 데이터 (충분한 컬럼이 있을 때만)
-                if (row.length >= 65) {
-                    let colIdx = 5;
-                    origins.forEach(origin => {
-                        // 해상 운임
-                        currentData.freight[origin].sea.la.push(parseFloat(row[colIdx++]) || 0);
-                        currentData.freight[origin].sea.longbeach.push(parseFloat(row[colIdx++]) || 0);
-                        currentData.freight[origin].sea.rotterdam.push(parseFloat(row[colIdx++]) || 0);
-                        currentData.freight[origin].sea.kandla.push(parseFloat(row[colIdx++]) || 0);
-                        currentData.freight[origin].sea.paradip.push(parseFloat(row[colIdx++]) || 0);
-                        currentData.freight[origin].sea.jnpt.push(parseFloat(row[colIdx++]) || 0);
-                    });
+            let validRows = 0;
+            let errorRows = 0;
+            
+            rows.forEach((row, index) => {
+                try {
+                    if (!row || row.length < 5) {
+                        console.warn(`행 ${index + 2}: 데이터 컬럼 수 부족`);
+                        errorRows++;
+                        return;
+                    }
                     
-                    // 항공 운임
-                    origins.forEach(origin => {
-                        currentData.freight[origin].air.lax.push(parseFloat(row[colIdx++]) || 0);
-                        currentData.freight[origin].air.jfk.push(parseFloat(row[colIdx++]) || 0);
-                        currentData.freight[origin].air.vie.push(parseFloat(row[colIdx++]) || 0);
-                        currentData.freight[origin].air.del.push(parseFloat(row[colIdx++]) || 0);
-                        currentData.freight[origin].air.bom.push(parseFloat(row[colIdx++]) || 0);
-                        currentData.freight[origin].air.blr.push(parseFloat(row[colIdx++]) || 0);
-                    });
-                } else {
-                    // 기본값으로 채움
-                    origins.forEach(origin => {
-                        ['la', 'longbeach', 'rotterdam', 'kandla', 'paradip', 'jnpt'].forEach(dest => {
-                            currentData.freight[origin].sea[dest].push(0);
+                    const dateValue = row[0];
+                    let date;
+                    
+                    // 더 강화된 날짜 검증
+                    if (dateValue instanceof Date) {
+                        date = dateValue;
+                    } else if (typeof dateValue === 'string') {
+                        date = new Date(dateValue);
+                    } else if (typeof dateValue === 'number') {
+                        // Excel 날짜 시리얼 번호 처리
+                        date = new Date((dateValue - 25569) * 86400 * 1000);
+                    } else {
+                        console.warn(`행 ${index + 2}: 유효하지 않은 날짜 형식:`, dateValue);
+                        errorRows++;
+                        return;
+                    }
+                    
+                    if (isNaN(date.getTime())) {
+                        console.warn(`행 ${index + 2}: 날짜 파싱 실패:`, dateValue);
+                        errorRows++;
+                        return;
+                    }
+                    
+                    // 숫자 데이터 검증 및 변환
+                    const bdi = safeParseFloat(row[1]);
+                    const scfi = safeParseFloat(row[2]);
+                    const ccfi = safeParseFloat(row[3]);
+                    const hrci = safeParseFloat(row[4]);
+                    
+                    // 최소값 검증 (음수 방지)
+                    if (bdi < 0 || scfi < 0 || ccfi < 0 || hrci < 0) {
+                        console.warn(`행 ${index + 2}: 음수 지수값 발견, 0으로 대체`);
+                    }
+                    
+                    currentData.dates.push(date);
+                    currentData.indices.BDI.push(Math.max(0, bdi));
+                    currentData.indices.SCFI.push(Math.max(0, scfi));
+                    currentData.indices.CCFI.push(Math.max(0, ccfi));
+                    currentData.indices.HRCI.push(Math.max(0, hrci));
+                    
+                    // 운임 데이터 처리 (더 안전한 방식)
+                    if (row.length >= 65) {
+                        let colIdx = 5;
+                        origins.forEach(origin => {
+                            // 해상 운임
+                            currentData.freight[origin].sea.la.push(Math.max(0, safeParseFloat(row[colIdx++])));
+                            currentData.freight[origin].sea.longbeach.push(Math.max(0, safeParseFloat(row[colIdx++])));
+                            currentData.freight[origin].sea.rotterdam.push(Math.max(0, safeParseFloat(row[colIdx++])));
+                            currentData.freight[origin].sea.kandla.push(Math.max(0, safeParseFloat(row[colIdx++])));
+                            currentData.freight[origin].sea.paradip.push(Math.max(0, safeParseFloat(row[colIdx++])));
+                            currentData.freight[origin].sea.jnpt.push(Math.max(0, safeParseFloat(row[colIdx++])));
                         });
-                        ['lax', 'jfk', 'vie', 'del', 'bom', 'blr'].forEach(dest => {
-                            currentData.freight[origin].air[dest].push(0);
+                        
+                        // 항공 운임
+                        origins.forEach(origin => {
+                            currentData.freight[origin].air.lax.push(Math.max(0, safeParseFloat(row[colIdx++])));
+                            currentData.freight[origin].air.jfk.push(Math.max(0, safeParseFloat(row[colIdx++])));
+                            currentData.freight[origin].air.vie.push(Math.max(0, safeParseFloat(row[colIdx++])));
+                            currentData.freight[origin].air.del.push(Math.max(0, safeParseFloat(row[colIdx++])));
+                            currentData.freight[origin].air.bom.push(Math.max(0, safeParseFloat(row[colIdx++])));
+                            currentData.freight[origin].air.blr.push(Math.max(0, safeParseFloat(row[colIdx++])));
                         });
-                    });
+                    } else {
+                        // 기본값으로 채움
+                        origins.forEach(origin => {
+                            ['la', 'longbeach', 'rotterdam', 'kandla', 'paradip', 'jnpt'].forEach(dest => {
+                                currentData.freight[origin].sea[dest].push(0);
+                            });
+                            ['lax', 'jfk', 'vie', 'del', 'bom', 'blr'].forEach(dest => {
+                                currentData.freight[origin].air[dest].push(0);
+                            });
+                        });
+                    }
+                    validRows++;
+                    
+                } catch (rowError) {
+                    console.error(`행 ${index + 2} 처리 오류:`, rowError);
+                    errorRows++;
                 }
             });
             
-            console.log(`실제 데이터 파싱 완료: ${currentData.dates.length}개 데이터 포인트`);
+            // 최종 검증
+            if (validRows === 0) {
+                throw new Error('파싱 가능한 유효 데이터가 없습니다.');
+            }
+            
+            updateDebugInfo(`✅ 데이터 파싱 완료: ${validRows}개 유효, ${errorRows}개 오류`);
+            console.log(`데이터 파싱 완료: ${currentData.dates.length}개 데이터 포인트`);
             initializeDateSelectors();
+        }
+        
+        // ==================== 개선된 숫자 변환 함수 ====================
+        function safeParseFloat(value, defaultValue = 0) {
+            if (value === null || value === undefined || value === '') {
+                return defaultValue;
+            }
+            
+            // 문자열인 경우 숫자가 아닌 문자 제거
+            if (typeof value === 'string') {
+                value = value.replace(/[^\d.-]/g, '');
+            }
+            
+            const parsed = parseFloat(value);
+            return isNaN(parsed) ? defaultValue : parsed;
+        }
+        
+        // ==================== 진단 함수들 ====================
+        function runFullDiagnosis() {
+            updateDebugInfo('📋 전체 시스템 진단 시작...');
+            updateSyncStatus('syncing', '시스템 진단 중...');
+            
+            testBasicConnection()
+                .then(() => callDiagnosisAPI())
+                .then(() => testDataLoad())
+                .then(() => {
+                    updateDebugInfo('✅ 전체 진단 완료 - 시스템 정상');
+                    updateSyncStatus('success', '진단 완료 - 정상');
+                })
+                .catch(error => {
+                    updateDebugInfo(`❌ 진단 실패: ${error.message}`);
+                    updateSyncStatus('error', '진단 실패');
+                });
+        }
+        
+        function testBasicConnection() {
+            return new Promise((resolve, reject) => {
+                updateDebugInfo('1️⃣ 기본 연결 테스트...');
+                
+                const script = document.createElement('script');
+                const testUrl = `${WEB_APP_URL}?type=health&callback=handleBasicConnectionTest&t=${Date.now()}`;
+                script.src = testUrl;
+                
+                window.handleBasicConnectionTest = function(result) {
+                    script.remove();
+                    delete window.handleBasicConnectionTest;
+                    
+                    if (result && result.status === 'success') {
+                        updateDebugInfo(`✅ 기본 연결 성공`);
+                        resolve(result);
+                    } else {
+                        reject(new Error('기본 연결 실패: ' + (result?.message || '알 수 없는 오류')));
+                    }
+                };
+                
+                script.onerror = function() {
+                    script.remove();
+                    delete window.handleBasicConnectionTest;
+                    reject(new Error('스크립트 로드 실패'));
+                };
+                
+                setTimeout(() => {
+                    if (document.body.contains(script)) {
+                        script.remove();
+                        delete window.handleBasicConnectionTest;
+                        reject(new Error('기본 연결 타임아웃'));
+                    }
+                }, 10000);
+                
+                document.body.appendChild(script);
+            });
+        }
+        
+        function callDiagnosisAPI() {
+            return new Promise((resolve, reject) => {
+                updateDebugInfo('2️⃣ 상세 진단 API 호출...');
+                
+                const script = document.createElement('script');
+                const diagnosisUrl = `${WEB_APP_URL}?type=diagnosis&callback=handleDiagnosisResult&t=${Date.now()}`;
+                script.src = diagnosisUrl;
+                
+                window.handleDiagnosisResult = function(result) {
+                    script.remove();
+                    delete window.handleDiagnosisResult;
+                    
+                    if (result) {
+                        let diagnosisReport = `📊 진단 결과 (${result.overallStatus}):<br>`;
+                        
+                        if (result.tests) {
+                            result.tests.forEach((test, index) => {
+                                const icon = test.status === 'PASS' ? '✅' : test.status === 'WARNING' ? '⚠️' : '❌';
+                                diagnosisReport += `${icon} ${test.name}: ${test.details}<br>`;
+                            });
+                        }
+                        
+                        updateDebugInfo(diagnosisReport);
+                        
+                        if (result.overallStatus === 'CRITICAL') {
+                            reject(new Error('시스템 상태 비정상'));
+                        } else {
+                            resolve(result);
+                        }
+                    } else {
+                        reject(new Error('진단 결과 없음'));
+                    }
+                };
+                
+                script.onerror = function() {
+                    script.remove();
+                    delete window.handleDiagnosisResult;
+                    reject(new Error('진단 API 호출 실패'));
+                };
+                
+                setTimeout(() => {
+                    if (document.body.contains(script)) {
+                        script.remove();
+                        delete window.handleDiagnosisResult;
+                        reject(new Error('진단 API 타임아웃'));
+                    }
+                }, 15000);
+                
+                document.body.appendChild(script);
+            });
+        }
+        
+        function testDataLoad() {
+            return new Promise((resolve, reject) => {
+                updateDebugInfo('3️⃣ 실제 데이터 로드 테스트...');
+                
+                const script = document.createElement('script');
+                const dataUrl = `${WEB_APP_URL}?type=dashboard&callback=handleDataLoadTest&t=${Date.now()}`;
+                script.src = dataUrl;
+                
+                window.handleDataLoadTest = function(result) {
+                    script.remove();
+                    delete window.handleDataLoadTest;
+                    
+                    if (result && result.status === 'success' && result.data) {
+                        updateDebugInfo(`✅ 데이터 로드 성공: ${result.rowCount}행 x ${result.columnCount}열<br>시트: ${result.sheetName}<br>출처: ${result.sheetSource || 'N/A'}`);
+                        
+                        try {
+                            parseSheetData(result.data);
+                            updateAllUI();
+                            resolve(result);
+                        } catch (parseError) {
+                            reject(new Error(`데이터 파싱 실패: ${parseError.message}`));
+                        }
+                    } else {
+                        reject(new Error('데이터 로드 실패: ' + (result?.message || '알 수 없는 오류')));
+                    }
+                };
+                
+                script.onerror = function() {
+                    script.remove();
+                    delete window.handleDataLoadTest;
+                    reject(new Error('데이터 로드 스크립트 실패'));
+                };
+                
+                setTimeout(() => {
+                    if (document.body.contains(script)) {
+                        script.remove();
+                        delete window.handleDataLoadTest;
+                        reject(new Error('데이터 로드 타임아웃'));
+                    }
+                }, 20000);
+                
+                document.body.appendChild(script);
+            });
         }
         
         // ==================== 샘플 데이터 생성 ====================
         function loadSampleData() {
             console.log('샘플 데이터 생성 중...');
+            updateDebugInfo('샘플 데이터 생성 중...');
             
             const sampleWeeks = 104; // 2년치 데이터
             const endDate = new Date();
@@ -1050,18 +1420,18 @@
                 });
             }
             
+            updateDebugInfo(`📊 샘플 데이터 생성 완료: ${sampleWeeks}주 데이터`);
             console.log('샘플 데이터 생성 완료');
             initializeDateSelectors();
             updateAllUI();
             updateSyncStatus('success', '샘플 데이터 로드 완료');
         }
         
-        // ==================== 날짜 선택기 초기화 ====================
+        // ==================== 나머지 함수들 ====================
         function initializeDateSelectors() {
             if (currentData.dates.length === 0) return;
             
             const latestDate = currentData.dates[currentData.dates.length - 1];
-            const earliestDate = currentData.dates[0];
             
             // 운임 테이블용 날짜 선택기
             document.getElementById('selectedDate').value = latestDate.toISOString().split('T')[0];
@@ -1075,7 +1445,6 @@
             document.getElementById('startDate').value = oneYearAgo.toISOString().split('T')[0];
         }
         
-        // ==================== 사용자 정의 날짜 범위 ====================
         function applyCustomDateRange() {
             const startDate = new Date(document.getElementById('startDate').value);
             const endDate = new Date(document.getElementById('endDate').value);
@@ -1093,7 +1462,6 @@
             customDateRange = { start: startDate, end: endDate };
             currentTimeRange = 'custom';
             
-            // 모든 time-btn 비활성화
             document.querySelectorAll('.time-btn').forEach(btn => btn.classList.remove('active'));
             
             updateMetrics();
@@ -1113,7 +1481,6 @@
             updateCharts();
         }
         
-        // ==================== UI 업데이트 ====================
         function updateAllUI() {
             updateMetrics();
             updateAnalysis();
@@ -1128,7 +1495,6 @@
             const startIdx = dataRange.start;
             const endIdx = dataRange.end;
             
-            // 현재값과 시작값
             const bdiCurrent = currentData.indices.BDI[endIdx];
             const bdiStart = currentData.indices.BDI[startIdx];
             const bdiChange = ((bdiCurrent - bdiStart) / bdiStart * 100).toFixed(1);
@@ -1145,7 +1511,6 @@
             const hrciStart = currentData.indices.HRCI[startIdx];
             const hrciChange = ((hrciCurrent - hrciStart) / hrciStart * 100).toFixed(1);
             
-            // UI 업데이트
             document.getElementById('bdiValue').textContent = bdiCurrent.toFixed(0);
             const bdiChangeEl = document.getElementById('bdiChange');
             bdiChangeEl.textContent = `${bdiChange > 0 ? '▲' : '▼'} ${Math.abs(bdiChange)}%`;
@@ -1174,13 +1539,11 @@
             const startIdx = dataRange.start;
             const endIdx = dataRange.end;
             
-            // 분석 기간 표시
             const startDate = currentData.dates[startIdx];
             const endDate = currentData.dates[endIdx];
             document.getElementById('analysisPeriod').textContent = 
                 `${startDate.toLocaleDateString()} ~ ${endDate.toLocaleDateString()}`;
             
-            // 수치 변동 분석
             const bdiChange = currentData.indices.BDI[endIdx] - currentData.indices.BDI[startIdx];
             const scfiChange = currentData.indices.SCFI[endIdx] - currentData.indices.SCFI[startIdx];
             const ccfiChange = currentData.indices.CCFI[endIdx] - currentData.indices.CCFI[startIdx];
@@ -1196,7 +1559,6 @@
             document.getElementById('ccfiChange2').textContent = `${ccfiChange > 0 ? '+' : ''}${ccfiChange.toFixed(1)} (${ccfiChangePercent}%)`;
             document.getElementById('hrciChange2').textContent = `${hrciChange > 0 ? '+' : ''}${hrciChange.toFixed(1)} (${hrciChangePercent}%)`;
             
-            // 변동성 분석 (표준편차)
             const bdiData = currentData.indices.BDI.slice(startIdx, endIdx + 1);
             const scfiData = currentData.indices.SCFI.slice(startIdx, endIdx + 1);
             const ccfiData = currentData.indices.CCFI.slice(startIdx, endIdx + 1);
@@ -1212,7 +1574,6 @@
             document.getElementById('ccfiStd').textContent = ccfiStd.toFixed(1);
             document.getElementById('hrciStd').textContent = hrciStd.toFixed(1);
             
-            // 가장 안정적인 지수
             const stds = [
                 { name: 'BDI', value: bdiStd },
                 { name: 'SCFI', value: scfiStd },
@@ -1222,7 +1583,6 @@
             const mostStable = stds.reduce((min, curr) => curr.value < min.value ? curr : min);
             document.getElementById('mostStable').textContent = mostStable.name;
             
-            // 상관관계 분석
             const bdiScfiCorr = calculateCorrelation(bdiData, scfiData);
             const bdiCcfiCorr = calculateCorrelation(bdiData, ccfiData);
             const scfiCcfiCorr = calculateCorrelation(scfiData, ccfiData);
@@ -1231,7 +1591,6 @@
             document.getElementById('bdiCcfiCorr').textContent = bdiCcfiCorr.toFixed(3);
             document.getElementById('scfiCcfiCorr').textContent = scfiCcfiCorr.toFixed(3);
             
-            // 가장 강한 상관관계
             const correlations = [
                 { name: 'BDI-SCFI', value: Math.abs(bdiScfiCorr) },
                 { name: 'BDI-CCFI', value: Math.abs(bdiCcfiCorr) },
@@ -1240,10 +1599,8 @@
             const strongestCorr = correlations.reduce((max, curr) => curr.value > max.value ? curr : max);
             document.getElementById('strongestCorr').textContent = strongestCorr.name;
             
-            // 독립적 지수 (HRCI는 y1축에 별도 표시되므로 독립성이 높음)
             document.getElementById('independentIndex').textContent = 'HRCI (별도 스케일)';
             
-            // 통계 요약
             const changes = [
                 { name: 'BDI', change: parseFloat(bdiChangePercent) },
                 { name: 'SCFI', change: parseFloat(scfiChangePercent) },
@@ -1264,7 +1621,6 @@
             document.getElementById('avgChange').textContent = `${avgChange > 0 ? '+' : ''}${avgChange}%`;
         }
         
-        // ==================== 통계 계산 함수들 ====================
         function calculateStandardDeviation(data) {
             const mean = data.reduce((sum, value) => sum + value, 0) / data.length;
             const variance = data.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) / data.length;
@@ -1294,7 +1650,6 @@
         
         function getDataRange() {
             if (customDateRange) {
-                // 사용자 정의 범위에서 가장 가까운 인덱스 찾기
                 let startIdx = 0;
                 let endIdx = currentData.dates.length - 1;
                 
@@ -1340,7 +1695,6 @@
             const origins = ['shanghai', 'hongkong', 'shenzhen', 'hanoi', 'hochiminh'];
             const originNames = ['🇨🇳 상해', '🇭🇰 홍콩', '🇨🇳 심천', '🇻🇳 하노이', '🇻🇳 호치민'];
             
-            // 해상 운임 테이블
             const seaTableBody = document.getElementById('seaTableBody');
             seaTableBody.innerHTML = '';
             
@@ -1364,7 +1718,6 @@
                 seaTableBody.appendChild(row);
             });
             
-            // 항공 운임 테이블
             const airTableBody = document.getElementById('airTableBody');
             airTableBody.innerHTML = '';
             
@@ -1389,7 +1742,6 @@
             });
         }
         
-        // ==================== 날짜 선택 기능 ====================
         function updateTableByDate() {
             const selectedDate = new Date(document.getElementById('selectedDate').value);
             if (isNaN(selectedDate.getTime())) {
@@ -1397,7 +1749,6 @@
                 return;
             }
             
-            // 가장 가까운 날짜 찾기
             let closestIndex = 0;
             let minDiff = Math.abs(currentData.dates[0] - selectedDate);
             
@@ -1422,7 +1773,6 @@
             updateFreightTables();
         }
         
-        // ==================== 차트 업데이트 ====================
         function updateCharts() {
             updateIndexChart();
             updateUSSeaChart();
@@ -1704,7 +2054,6 @@
             });
         }
         
-        // ==================== 유틸리티 함수 ====================
         function switchTab(tabName) {
             const tabs = document.querySelectorAll('.tab');
             const contents = document.querySelectorAll('.tab-content');
@@ -1748,13 +2097,15 @@
         
         // ==================== 이벤트 리스너 ====================
         document.addEventListener('DOMContentLoaded', function() {
+            updateDebugInfo('시스템 초기화 중...');
+            
             // 시간 범위 버튼
             document.querySelectorAll('.time-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
                     document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
                     this.classList.add('active');
                     currentTimeRange = this.getAttribute('data-range');
-                    customDateRange = null; // 사용자 정의 범위 초기화
+                    customDateRange = null;
                     updateMetrics();
                     updateAnalysis();
                     updateCharts();
@@ -1769,19 +2120,17 @@
             // 초기 샘플 데이터 로드
             loadSampleData();
             
-            // 5초 후 실제 데이터 연동 시도 (백그라운드)
+            // 3초 후 실제 데이터 연동 시도
             setTimeout(() => {
-                if (WEB_APP_URL !== 'https://script.google.com/macros/s/AKfycbzUBdFZB3HXbdWAR-pV96DCHPvhWoDTt0-2L4qCMx6EwPlgvz_50tO-XxgRugg2Il-k/exec') {
-                    loadDataFromGoogleSheets();
-                }
-            }, 5000);
+                updateDebugInfo('실제 데이터 연동 시도...');
+                loadDataFromGoogleSheets();
+            }, 3000);
             
-            // 자동 새로고침 설정 (실제 URL이 설정된 경우에만)
-            if (WEB_APP_URL !== 'https://script.google.com/macros/s/AKfycbzUBdFZB3HXbdWAR-pV96DCHPvhWoDTt0-2L4qCMx6EwPlgvz_50tO-XxgRugg2Il-k/exec') {
-                refreshTimer = setInterval(() => {
-                    loadDataFromGoogleSheets();
-                }, REFRESH_INTERVAL);
-            }
+            // 자동 새로고침 설정 (10분마다)
+            refreshTimer = setInterval(() => {
+                updateDebugInfo('자동 새로고침 실행...');
+                loadDataFromGoogleSheets();
+            }, 10 * 60 * 1000);
         });
         
         // 페이지 언로드 시 타이머 정리
